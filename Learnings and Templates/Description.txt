@@ -1,0 +1,2 @@
+This folder contains all the sample programs for various tools, phases. This folder also contains about the things we have learned throughout the project.
+This acts as a starting point as well as reference for our language.
