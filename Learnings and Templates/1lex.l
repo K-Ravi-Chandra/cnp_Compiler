@@ -31,8 +31,8 @@ using namespace std;
 "'"."'"															{cout <<  "Char_Const " ;}
 [a-zA-z_][a-zA-z_0-9]*			 								{cout << "Identifier " ;}
 \"(\\.|[^\"])*\"												{cout << "STRING " ;}
-"//"(\\.|[^\n])*[\n]											;
-[/][*]([^*]|[*]*[^*/])*[*]+[/]                                  ;
+"//"(\\.|[^\n])*[\n]											{cout << "single line comment" << endl;}
+[/][*]([^*]|[*]*[^*/])*[*]+[/]                                  {cout << "Multiline comment" << endl;}
 [ \t\n]															;
 
 %%
