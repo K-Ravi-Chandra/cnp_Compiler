@@ -1,0 +1,35 @@
+STL 	= StatementList;
+FORST	= For Statement
+BEXP	= Boolean Expression
+LSTS	= List of Statements
+ST		= Statement;
+STS		= Statements;
+
+
+FORST	->	"for" "(" LSTS1			{
+										FORST.next = new label();
+										check = new label();
+										code += label(check);
+										code += LSTS1.code;
+									}
+			| ";" BEXP ";"			{
+										start = new label();
+										BEXP.true = start;
+										BEXP.false = FORST.next;
+										code += label(start);
+									}
+			| LSTS2 ")"				{}
+			| STL					{	
+										STL.break = FORST.next;
+										STL.continue = check;
+										code += LSTS2.code;
+										code += goto(check);
+										code += label(FORST.next);
+									}
+
+LSTS	->	ST STS					{}
+
+STS		-> 	";" ST STS				{}
+			| NULL					{} 
+											
+

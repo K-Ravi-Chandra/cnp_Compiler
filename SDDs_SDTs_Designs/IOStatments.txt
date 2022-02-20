@@ -1,0 +1,66 @@
+IOST	= I/O Statement;
+PST		= Print Statement;
+SST 	= Scan Statement;
+ARGS	= Arguements;
+ARG		= ARguement;
+FCN		= float constant
+ICN		= int constant
+CCN		= char constant
+SCN		= string constant
+BCN		= Bool constant
+VAR 	= Variable
+AEXP	= Arithmetic Expression
+
+
+
+IOST 	-> 	PST						{}
+			| SST					{}	
+
+
+PST		-> 	"print" "(" ARGS ")"	{}		
+SST		-> 	VAR "=" "scan()"		{
+										if( VAR.type == int )
+										{
+											code += "scanint VAR";
+										}
+										else if
+										//similarly scan input according to the type;
+										//for dynamicvariable without type scan a 
+										// a string and assign it.
+									}
+			| "scan()"				{
+										//scan one byte into some empty register;
+									}
+
+ARGS	-> 	ARG "," ARGS			{
+										if( ARG.type == int )
+										{
+											code += "printint ARG";
+										}
+										elseif
+										//similarly print other ARG according to
+										//their types
+									}
+								
+			| NULL
+
+
+ARG		->	VAR						{	
+										ARG.type = VAR.type;  
+										ARG.addr = VAR.addr;
+										//similarly declare type for ARG for other 
+										//constants
+									}
+			| AEXP					{
+										ARG.type = AEXP.type;
+										ARG.addr = AEXP.addr;
+									}
+			| ICN					{
+										ARG.addr = ICN;
+										//similarly pass constant values for other 
+										//constants
+									}
+			| FCN
+			| CCN
+			| SCN
+			| BCN

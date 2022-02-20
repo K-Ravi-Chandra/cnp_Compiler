@@ -1,0 +1,43 @@
+BEXP	= Boolean Expression
+AEXP	= Arithmetic Expression
+RELOP	= Relational Operator
+BTERM	= Boolean Term
+
+
+BEXP	->	BTERM1 "||"			{
+									BTERM1.true = BEXP.true;
+									BTERM1.false = new label();
+									code += label(BTERM1.false);
+								}
+		   	BTERM2				{
+			   						BTERM2.true = BEXP.true;
+									BTERM2.false = BEXP.false;
+			   					}
+		 	| BTERM3 "&&"		{
+									BTERM3.true = new label();
+									BTERM3.false = BEXP.false;
+									code += label(BTERM3.true);
+								}
+			BTERM4				{
+									BTERM4.true = BEXP.true;
+									BTERM4.false = BEXP.false;
+								}
+			| BTERM				{
+									BTERM.true = BEXP.true;
+									BTERM.false = BEXP.false);
+								}
+								
+BTERM	->	"true"				{
+									code += goto(BTERM.true);
+								}
+			| "false"			{
+									code += goto(BTERM.false);
+								}
+			| AEXP2 RELOP AEXP2	{
+									code += "if AEXP1.addr relop AEXP2.addr goto BTERM.true";
+									code += goto(BTERM.false);
+								}
+			| !(BEXP)			{
+									BEXP.true = BTERM.false;
+									BEXP.false = BTERM.true;
+								}

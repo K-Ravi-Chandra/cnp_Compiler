@@ -1,0 +1,196 @@
+AEXP	= Arithmetic Expression
+ATERM	= Arithmetic TERM
+AFAC	= Arithmetic Factor
+AST		= Arithmetic Statement	
+NCN		= Number Constant
+AVAR	= Atomic Variable
+VAR		= Variable( int, float, dynamic)
+IVAR	= Integer Variable
+FVAR	= Floating Variable
+LV1		= Level 1 Operator
+LV2		= Level 2 Operator
+LV3		= Level 3 Operator
+LV4		= Level 4 Operator
+
+
+AST		->	VAR ASSIGN AEXP			{
+										op = ASSIGN.operation;
+
+										if( VAR.type == int and AEXP.type = float )
+										{
+											ERROR;
+										}
+										elseif( VAR.type == AEXP.type == int )
+										{
+											code += "VAR = VAR opi AEXP.addr";
+										}
+										elseif( VAR.type == float and AEXP.type == int)
+										{
+											t = new Temp();
+											code += "t = ElevateToFloat(AEXP)";
+											code += "VAR = VAR opf t";
+										}
+										else if( VAR.type == dynamicfloat and AEXP.type == float )
+										{
+											code += "VAR = VAR opf AEXP.addr";
+										}
+										else if( VAR.type == dynamicint and AEXP.type == float )
+										{
+											t = new Temp();
+											code += "t = ElevateToFloat(VAR);
+											code += "t = t opf AEXP.addr";
+										}
+										else if( VAR.type == dynamicfloat and AEXP.type == int )
+										{
+											t = new Temp();
+											code += "t = ElevateToFloat(AEXP.addr)";
+											code += "VAR = VAR opf t";
+										}
+										else if( VAR.type == dynamicint and AEXP.type === int )
+										{
+											code += "VAR = VAR opf AEXP.addr";
+										}
+									}
+
+			| VAR "=" AEXP			{
+										//Same as above with type checking		
+									}
+
+ASSIGN	->	"+="					{
+										ASSIGN.op = "+=";
+									}
+			| "-="					{
+										ASSIGN.op = "-=";
+									}
+			| "*="					{
+										ASSIGN.op = "*=";
+									}
+			| "/="					{
+										ASSIGN.op = "/=";
+									}
+
+AEXP	->	AEXP1 LV1 ATERM			{
+										op = LV1.op;
+										if( AEXP1.type == int and ATERM.type == int )
+										{
+											AEXP.type = int;
+											AEXP.addr = new Temp();
+											code += "AEXP.addr = AEXP1.addr opi ATERM.addr";
+										}
+										elseif(AEXP1.type == float and ATERM.type == float)
+										{
+											AEXP.type = float;
+											AEXP.addr = new Temp();
+											code += "AEXP.addr = AEXP1.addr opf ATERM.addr";
+										}
+										elseif( AEXP1.type == float and ATERM.type == int)
+										{
+											AEXP.type = float;
+											AEXP.addr = new Temp();
+											t = new Temp();
+											code += "t = ElevateToFloat(ATERM)";
+											code +=	"AEXP.addr = AEXP1.addr opf t";
+										}
+										else if( AEXP1.type == int and ATERM.tupe == float)
+										{
+											AEXP.type = float;
+											AEXP.addr = new Temp();
+											t = new Temp();
+											code += "t = ElevateToFloat(AEXP1)";
+											code += "AEXP.addr = t opf ATERM.addr";
+										}
+									}
+			| ATERM					{
+										AEXP.addr = ATERM.addr;
+										AEXP.type = ATERM.type;
+									}
+
+ATERM	->	ATERM1 LV2 AFAC			{
+										//same as above
+									}
+			| AFAC					{
+										//same as above
+									}
+
+AFAC	->	(AEXP)					{
+										AFAC.addr = AEXP.addr;
+									}
+			| AVAR					{
+										AFAC.addr = AVAR.addr;
+									}
+			| LV3 AVAR				{
+										AFAC.addr = AVAR.addr;
+										if( LV3.op == "++" or LV3.op == "--" )
+										{
+											if( AVAR.type == float )
+											{
+												ERROR;
+											}
+											else
+											{
+												code += "AVAR.addr = AVAR.addr LV3.op #1";
+												AFAC.addr = AVAR.addr;
+											}
+										}
+										else if( LV3 == "-" )
+										{
+											code += "AVAF.addr = AVAR.addr * #-1";	
+										}
+									}
+AVAR 	->	IVAR LV4				{
+										t = new Temp();
+										AVAR.addr = t;
+										code += "AVAR.addr = IVAR.addr";
+										code += "IVAR.addr = IVAR.addr LV4.op #1";
+									}
+			| IVAR					{
+										AVAR.addr = IVAR.addr;
+									}
+			| FVAR					{
+										AVAR.addr = IVAR.addr; 
+									}
+			| NCN					{
+										t = new Temp();
+										code += "t = NCN";
+										AVAR.addr = t;
+									}
+
+
+LV1		->	"+"						{
+										LV1.op = "+";
+									}
+			| "-"					{
+										LV1.op = "-";
+									}
+
+LV2		->	"*"						{
+										LV2.op = "*";
+									}
+			| "/"					{
+										LV2.op = "/";
+									}
+			| "%"					{
+										LV2.op = "%";
+									}
+
+LV3		->	"+"						{
+										LV3.op = "+";
+									}
+			| "-"					{
+										LV3.op = "-";
+									}
+			| "++"					{
+										LV3.op = "++";	//prefix
+									}
+			| "--"					{
+										LV3.op = "--";	//prefix
+									}
+
+LV4		->	"++"					{
+										LV4.op = "++";
+									}
+			| "--"					{
+										LV4.op = "--";
+									}
+
+
