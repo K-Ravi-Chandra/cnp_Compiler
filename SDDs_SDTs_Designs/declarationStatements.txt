@@ -23,8 +23,6 @@ ADS		->	"," D ADS1		{
 
 D		-> 	VN				{	
 								//Insert VN, d.type into symbol table
-								code += D.type + VN;
-							}
 			| VN = EXP		{
 								//insert VN, d.type into symbol table
 								code += D.type + VN;

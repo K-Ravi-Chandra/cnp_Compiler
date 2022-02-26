@@ -1,8 +1,11 @@
-int   NAME   =     100  
-int vaR =   0 
-int Cat = 2943938 
-bool Cat = 2943938 
-float Cat = 2943938 
-string Cat = 2943938 
-char Cat = 2943938 
-int Cat = 2943938 
+{
+	int i = 0;
+	if( i == 10 )
+	{
+		i = 10;
+	}
+	elif( i == 5 )
+	{
+		i = 5;
+	}
+}
