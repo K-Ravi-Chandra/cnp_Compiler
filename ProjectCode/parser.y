@@ -6,6 +6,8 @@
 #include<vector>
 using namespace std; extern FILE* yyin;
 extern int DEBUG;
+extern int sym_pointer;
+extern char symboltable[2000][3][1000];
 extern "C"
 {
 	int yyparse(void);
@@ -905,12 +907,30 @@ int main( int argcount, char* arguements[] )
 {
 	yyin = fopen(arguements[1], "r");
 	yyparse();
-	cout << "symbol table" << endl;
+
+	cout << "symbol Table" << endl;
+
+	char t[50]={'T','O','K', 'E','N','\0'};
+	char type[50]={'T','Y','P','E','\0'};
+	char variant[50]={'V','A','R','I','A','N','T','\0'};
+	printf("%32s",t);
+	printf("%32s",type);
+	printf("%32s\n",variant);
+	for(int i=0;i<sym_pointer;i++){
+		printf("%32s",symboltable[i][0]);
+		printf("%32s",symboltable[i][1]);
+		printf("%32s\n",symboltable[i][2]);
+	}
+	printf("\n");
+
+
+	/* cout << "symbol table" << endl;
 	for(auto x : symbolTable)
 	{
 		cout << x.first << " " << x.second << endl;
 	}
-	cout << endl;
+	cout << endl; */
+
 	cout << "Code: " << endl;
 	cout << code << endl;
 	return 0;
