@@ -1,11 +1,7 @@
+void main()
 {
-	int i = 0;
-	if( i == 10 )
-	{
-		i = 10;
-	}
-	elif( i == 5 )
-	{
-		i = 5;
-	}
+	int sum = 0;
+	int[sum] numbers;
+
+	int k = numbers[7];
 }
