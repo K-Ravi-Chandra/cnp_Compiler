@@ -1,7 +1,0 @@
-void main()
-{
-	int sum = 0;
-	int[sum] numbers;
-
-	int k = numbers[7];
-}
