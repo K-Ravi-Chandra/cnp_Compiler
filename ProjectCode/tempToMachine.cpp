@@ -4,11 +4,15 @@
 #include<string.h>
 using namespace std;
 
-int main( int argcount, char* arguements[] )
+int main( int argcount, char* arguments[] )
 {
 	string mc = ".text \n.globl main \nmain:\n";
 	string def = ".data\n";
-	fstream file; file.open(arguements[1],ios::in); if (file.is_open())
+
+	int looplabel = 1;
+	fstream file; 
+	file.open(string(arguments[1]),ios::in); 
+	if (file.is_open())
 	{  
 		string s;
 		vector<string> var;
@@ -64,8 +68,28 @@ int main( int argcount, char* arguements[] )
 			}
 			else if(tokens[0] == "char")
 			{
-				string v = tokens[1];
-				def += v + ": .word 0\n";
+				if(tokens.size() > 2 )
+				{
+					mc += "li $8, 1\n";
+
+					for( int i = 2 ; i < tokens.size() ; i++ )
+					{
+						mc += "lw $9, " + tokens[i] + "\n";
+						mc += "mul $8, $8, $9\n";
+					}
+					mc += "li $10, 1\n";
+					mc += "mul $8, $8, $10\n";
+					mc += "li $2, 9\n";
+					mc += "move $4, $8\n";
+					mc += "syscall\n";
+					mc += "sw $2, "+tokens[1]+"\n";
+					def += tokens[1] + ": .word 0\n";
+				}
+				else
+				{
+					string v = tokens[1];
+					def += v + ": .word 0\n";
+				}
 			}
 			else if(tokens[0] == "float")
 			{
@@ -79,8 +103,28 @@ int main( int argcount, char* arguements[] )
 			}
 			else if( tokens[0] == "string" )
 			{
-				string v = tokens[1];
-				def += v + ": .asciiz \"\" \n";
+				if(tokens.size() > 2 )
+				{
+					mc += "li $8, 1\n";
+
+					for( int i = 2 ; i < tokens.size() ; i++ )
+					{
+						mc += "lw $9, " + tokens[i] + "\n";
+						mc += "mul $8, $8, $9\n";
+					}
+					mc += "li $10, 4\n";
+					mc += "mul $8, $8, $10\n";
+					mc += "li $2, 9\n";
+					mc += "move $4, $8\n";
+					mc += "syscall\n";
+					mc += "sw $2, "+tokens[1]+"\n";
+					def += tokens[1] + ": .word 0\n";
+				}
+				else
+				{
+					string v = tokens[1];
+					def += v + ": .word 0\n";
+				}
 			}
 			else if(tokens[0] == "if")
 			{
@@ -254,14 +298,25 @@ int main( int argcount, char* arguements[] )
 				}
 				else if(type == "char")
 				{
-					mc += "li $2, 11\n"; 
-					mc += "lw $4, " + var1 +"\n";
-					mc += "syscall\n";
+					if( var1[0] == '*' )
+					{
+						mc += "lw $8, " + var1.substr(1, var1.size()) + "\n";
+						mc += "lb $8, ($8)\n";
+						mc += "li $2, 11\n"; 
+						mc += "move $4, $8\n";
+						mc += "syscall\n";
+					}
+					else
+					{
+						mc += "li $2, 11\n"; 
+						mc += "lb $4, " + var1 +"\n";
+						mc += "syscall\n";
+					}
 				}
 				else if(type == "string")
 				{
 					mc += "li $2, 4\n"; 
-					mc += "la $4, " + var1 +"\n";
+					mc += "lw $4, " + var1 +"\n";
 					mc += "syscall\n";
 				}
 				else if(type == "float")
@@ -316,11 +371,29 @@ int main( int argcount, char* arguements[] )
 					mc += "li $4, 200\n";
 					mc += "li $2, 9\n";
 					mc += "syscall\n";
-					mc += "move $2, $4\n";
+					mc += "move $4, $2\n";
 					mc += "li $2, 8\n";
 					mc += "li $5, 200\n";
 					mc += "syscall\n";
 					mc += "sw $4, "+var1+"\n";
+
+					mc += "lw $16, " + var1 + "\n"; 
+					string loop1 = "looplabel" + to_string(looplabel);
+					looplabel++;
+					string exit1 = "looplabel" + to_string(looplabel);
+					looplabel++;
+
+					mc += "addi $t0, $zero, 0\n";
+					mc += loop1  + ":\n";
+					mc += "lb $t1, 0($16)\n";
+					mc += "li $t4, 10\n";
+					mc += "beq $t1, $t4, " + exit1 + "\n";
+
+					mc += "addi $16, $16, 1\n";
+					mc += "addi $t0, $t0, 1\n";
+					mc +=  "j " + loop1 + "\n";
+					mc += exit1 + ":\n";
+					mc += "sb $zero, 0($16)\n";
 				}
 				else if(type == "float")
 				{
@@ -358,6 +431,26 @@ int main( int argcount, char* arguements[] )
 
 				if(eq == "=i")
 				{
+					if( tokens[2] == "len" )
+					{
+						mc += "lw $16, " + tokens[3] + "\n";
+						string loop1 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string exit1 = "looplabel" + to_string(looplabel);
+						looplabel++;
+
+						mc += "addi $t0, $zero, 0\n";
+						mc += loop1  + ":\n";
+						mc += "lb $t1, 0($16)\n";
+						mc += "beqz $t1, " + exit1 + "\n";
+
+						mc += "addi $16, $16, 1\n";
+						mc += "addi $t0, $t0, 1\n";
+						mc +=  "j " + loop1 + "\n";
+						mc += exit1 + ":\n";
+						mc += "sw $t0, " + tokens[0] + "\n";
+						continue;
+					}
 					v1 = tokens[2];
 					if( tokens.size() == 4 )	//t1 = minus t2
 					{
@@ -562,11 +655,140 @@ int main( int argcount, char* arguements[] )
 				{
 					if (tokens[2] == "strcat")
 					{
+						mc += "lw $16, " + tokens[3] + "\n"; 
+
+						string loop1 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string exit1 = "looplabel" + to_string(looplabel);
+						looplabel++;
+
+						mc += "addi $t0, $zero, 0\n";
+						mc += loop1  + ":\n";
+						mc += "lb $t1, 0($16)\n";
+						mc += "beqz $t1, " + exit1 + "\n";
+
+						mc += "addi $16, $16, 1\n";
+						mc += "addi $t0, $t0, 1\n";
+						mc +=  "j " + loop1 + "\n";
+						mc += exit1 + ":\n";
+
+						string loop2 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string exit2 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						
+						mc += "lw $16, " + tokens[4] + "\n"; 
+
+						mc += loop2  + ":\n";
+						mc += "lb $t1, 0($16)\n";
+						mc += "beqz $t1, " + exit2 + "\n";
+
+						mc += "addi $16, $16, 1\n";
+						mc += "addi $t0, $t0, 1\n";
+						mc +=  "j " + loop2 + "\n";
+						mc += exit2 + ":\n";
+						
+						mc += "addi $t0, $t0, 1\n";
+
+						mc += "li $2, 9\n";
+						mc += "move $4, $t0\n";
+						mc += "syscall\n";
+						
+						mc += "sw $2, " + tokens[0] + "\n";
+
+
+						string loop3 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string out3 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						
+						mc += "add $t0, $zero, $zero\n";
+						mc += "lw $16, " + tokens[3] + "\n"; 
+						mc += loop3 + ":\n";
+						mc += "add $t1, $16, $t0\n";
+						mc += "lb $t2, 0($t1)\n";
+						mc += "beq $t2, $zero, " + out3 + "\n";
+						mc += "add $t3, $2, $t0\n";
+						mc += "sb $t2, 0($t3)\n";
+						mc += "addi $t0, $t0, 1\n";
+						mc += "j " + loop3 + "\n";
+						mc += out3 + ":\n";
+
+						string loop4 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string out4 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						mc += "add $2, $2, $t0\n";
+						mc += "add $t0, $zero, $zero\n";
+						mc += "lw $16, " + tokens[4] + "\n"; 
+						mc += loop4 + ":\n";
+						mc += "lb $t2, 0($16)\n";
+						mc += "sb $t2, 0($2)\n";
+						mc += "addi $16, $16, 1\n";
+						mc += "addi $2, $2, 1\n";
+						mc += "beq $t2, $zero, " + out4 + "\n";
+						mc += "j " + loop4 + "\n";
+						mc += out4 + ":\n";
 
 					}
 					else if(tokens[2] == "strcatc")
-					{
+					{  
+						mc += "lw $16, " + tokens[3] + "\n"; 
 
+						string loop1 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string exit1 = "looplabel" + to_string(looplabel);
+						looplabel++;
+
+						mc += "addi $t0, $zero, 0\n";
+						mc += loop1  + ":\n";
+						mc += "lb $t1, 0($16)\n";
+						mc += "beqz $t1, " + exit1 + "\n";
+
+						mc += "addi $16, $16, 1\n";
+						mc += "addi $t0, $t0, 1\n";
+						mc +=  "j " + loop1 + "\n";
+						mc += exit1 + ":\n";
+
+						mc += "addi $t0, $t0, 2\n";
+
+						mc += "li $2, 9\n";
+						mc += "move $4, $t0\n";
+						mc += "syscall\n";
+						
+						mc += "sw $2, " + tokens[0] + "\n";
+
+
+						string loop3 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string out3 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						
+						mc += "add $t0, $zero, $zero\n";
+						mc += "lw $16, " + tokens[3] + "\n"; 
+						mc += loop3 + ":\n";
+						mc += "add $t1, $16, $t0\n";
+						mc += "lb $t2, 0($t1)\n";
+						mc += "beq $t2, $zero, " + out3 + "\n";
+						mc += "add $t3, $2, $t0\n";
+						mc += "sb $t2, 0($t3)\n";
+						mc += "addi $t0, $t0, 1\n";
+						mc += "j " + loop3 + "\n";
+						mc += out3 + ":\n";
+
+						if( tokens[4][0] == '*' )
+						{
+							mc += "lw $t2, " + tokens[4].substr(1, tokens[4].length()) + "\n";
+							mc += "lb $t2, 0($t2)\n";
+						}
+						else
+						{
+							mc += "lb $t2, " + tokens[4] + "\n";
+						}
+						mc += "add $2, $2, $t0\n";
+						mc += "sb $t2, 0($2)\n";
+						mc += "addi $2, $2, 1\n";
+						mc += "sb $zero, 0($2)\n";
 					}
 					else if( tokens[2][0] == '#' )
 					{
@@ -580,8 +802,47 @@ int main( int argcount, char* arguements[] )
 					}
 					else
 					{
-						mc += "la $10, " + tokens[2] + "\n"; 
-						mc += "sw $10, " + tokens[0] + "\n";
+						mc += "lw $16, " + tokens[2] + "\n"; 
+
+						string loop1 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string exit1 = "looplabel" + to_string(looplabel);
+						looplabel++;
+
+						mc += "addi $t0, $zero, 0\n";
+						mc += loop1  + ":\n";
+						mc += "lb $t1, 0($16)\n";
+						mc += "beqz $t1, " + exit1 + "\n";
+
+						mc += "addi $16, $16, 1\n";
+						mc += "addi $t0, $t0, 1\n";
+						mc +=  "j " + loop1 + "\n";
+						mc += exit1 + ":\n";
+						mc += "addi $t0, $t0, 1\n";
+
+						mc += "li $2, 9\n";
+						mc += "move $4, $t0\n";
+						mc += "syscall\n";
+						
+						mc += "sw $2, " + tokens[0] + "\n";
+
+						mc += "add $t0, $zero, $zero\n";
+
+						string loop2 = "looplabel" + to_string(looplabel);
+						looplabel++;
+						string out = "looplabel" + to_string(looplabel);
+						looplabel++;
+
+						mc += "lw $16, " + tokens[2] + "\n"; 
+						mc += loop2 + ":\n";
+						mc += "add $t1, $16, $t0\n";
+						mc += "lb $t2, 0($t1)\n";
+						mc += "add $t3, $2, $t0\n";
+						mc += "sb $t2, 0($t3)\n";
+						mc += "addi $t0, $t0, 1\n";
+						mc += "beq $t2, $zero, " + out + "\n";
+						mc += "j " + loop2 + "\n";
+						mc += out + ":\n";
 					}
 
 				}
@@ -606,262 +867,24 @@ int main( int argcount, char* arguements[] )
 					else if(v1[0] == '*')
 					{
 						mc += "lw "+reg1+", "+v1.substr(1, v1.size())+"\n";
-						mc += "lw "+reg1+", "+"("+reg1+")\n";
+						mc += "lb "+reg1+", "+"("+reg1+")\n";
 					}
 					else
 					{
-						mc += "lw "+reg1+", "+v1+"\n";
+						mc += "lb "+reg1+", "+v1+"\n";
 					}
 
 					if( res[0] == '*')
 					{
 						mc += "lw "+reg4+", "+res.substr(1, res.size())+"\n";
-						mc += "sw "+reg1+", "+"("+reg4+")\n";
+						mc += "sb "+reg1+", "+"("+reg4+")\n";
 					}
 					else
 					{
-						mc += "sw " + reg1 + ", " + res + "\n";
+						mc += "sb " + reg1 + ", " + res + "\n";
 					}
 				}
 			}
-
-			/*
-			   {
-			   int a = 0;
-			   string v1, v2;
-			   string reg1 = "$8";
-			   string reg2 = "$9";
-			   string reg3 = "$10";
-			   string f1="$f0", f2="$f1", f3="$f2";
-
-			   v1 = tokens[0];
-			   v2 = tokens[2];
-			   if(v2 == "true")
-			   {
-			   mc += "li "+reg2+", 1"+"\n";
-			   }
-			   else if(v2 == "false")
-			   {
-			   mc += "li "+reg2+", 0"+"\n";
-			   }
-			   else if(v2 == "minus")
-			   {
-			   if(tokens[1] == "=i")
-			   {
-			   mc += "lw "+reg1+", " + v2 +"\n";
-			   mc += "sub "+reg2+ ", $zero, "+reg1+"\n";
-			   mc += "sw "+reg2+", "+v1+"\n";
-			   }
-			   else if(tokens[1] == "=f")
-			   {
-			   mc += "lwc1 " +f1+ ", " + v2 +"\n";
-			   mc += "sub.s "+f2+ ", $zero, " + f1 + "\n";
-			   mc += "swc1 " +f2+ ", "+v1+"\n";
-			   }
-			   }
-			   string eq = tokens[1];
-			   if(eq == "=i")
-			   {         //integer i
-			   if(tokens.size() > 3)
-			   {
-			   string op = tokens[3];
-
-			   string v3 = tokens[4];
-
-			   if(v2[0] == '#')
-			   {
-			   mc += "li " +reg1+", "+v2.substr(1, v2.size())+"\n";
-			   }
-			   else if(v2[0] == '*')
-			   {
-			   mc += "lw "+reg1+", "+v2.substr(1, v2.size())+"\n";
-			   mc += "lw "+reg1+", "+"("+reg1+")\n";
-			   }
-			   else
-			   {
-			   mc += "lw "+reg1+", "+v2+"\n";
-			   }
-
-			   int t2 = 0;
-			   if(v3[0] == '#')
-			   {
-			   t2=1;
-			   }
-			   else if(v3[0] == '*')
-			   {
-			   mc += "lw "+reg2+", "+v3.substr(1, v3.size())+"\n";
-			   mc += "lw "+reg2+", "+"("+reg2+")\n";
-			   }
-			   else
-			   {
-			   mc += "lw "+reg2+", "+v3+"\n";
-			   }
-
-			if(op == "+i")
-			{
-				t2 == 0 ? mc += "add "+ reg3 + ", " + reg1 + ", " + reg2 + "\n" : mc += "addi "+ reg3 + ", " + reg1 + ", " + v3.substr(1, v3.length()) + "\n";
-			}
-			else if(op == "-i")
-			{
-				mc += "sub "+ reg3 + ", " + reg1 + ", " + reg2 + "\n";
-			}
-			else if(op == "*i")
-			{
-				mc += "mul "+ reg3 + ", " + reg1 + ", " + reg2 + "\n";
-			}
-			else if(op == "/i")
-			{
-				mc += "div "+ reg1 + ", " + reg2 + "\n";
-				mc += "mflo "+ reg3 + "\n";
-			}
-			mc += "sw " + reg3 + ", (" + reg2 + ")\n";
-		}
-			else {
-				if(v2[0] == '#'){
-					mc += "li "+reg2+", "+v2.substr(1, v2.length())+"\n";
-				}
-				else if(v2[0] == '*'){
-					mc += "lw "+reg1+", "+v2.substr(1, v2.size())+"\n";
-					mc += "lw "+reg1+", "+"("+reg1+")\n";
-				}
-				else{
-					mc += "lw "+reg2+", "+v2+"\n";
-				}
-				mc += "lw " + reg1 + ", " + v1 + "\n";
-				mc += "sw " + reg2 + "," + reg1 + "\n";
-			}
-		}
-			   else if(eq == "=f")
-			   {    //float =
-				   //string f1="$f0", f2="$f1", f3="$f2";
-
-				   if(tokens.size() > 3){
-					   string op = tokens[3];
-
-					   string v3 = tokens[4];
-					   //mc += "lwc1 "+f1+", "+v2+"\n";
-					   if(v2[0] == '#'){
-						   mc += "li.s"+ f1 + ", " + v2.substr(1, v2.length()) + "\n";
-					   }
-					   else if(v2[0] == '*'){
-						   mc += "lwc1 "+f1+", "+v2.substr(1, v2.length())+"\n";
-						   mc += "lwc1 "+f1+", "+"("+f1+")\n";
-					   }
-					   else{
-						   mc += "lwc1 "+f1+", "+v2+"\n";
-					   }
-
-
-					   if(v3[0] == '#'){
-						   mc += "li.s"+ f2 + ", " + v3.substr(1, v3.length()) + "\n";
-					   }
-					   else if(v3[0] == '*'){
-						   mc += "lwc1 "+f2+", "+v3.substr(1, v3.length())+"\n";
-						   mc += "lwc1 "+f2+", "+"("+f2+")\n";
-					   }
-					   else{
-						   mc += "lwc1 "+f2+", "+v3+"\n";
-					   }
-
-					   if(op == "+f"){
-						   mc += "add.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
-					   }
-					   else if(op == "-f"){
-						   mc += "sub.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
-					   }
-					   else if(op == "*f"){
-						   mc += "mul.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
-					   }
-					   else if(op == "/f"){
-						   mc += "div.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
-					   }
-					   if(v1[0] == '*'){
-
-						   mc += "lwc1 " + f2 + ", " + v1.substr(1, v1.length()) + "\n";
-						   mc += "swc1 " + f3 + ", (" + f2 + ")\n";  
-					   }
-					   else {
-						   mc += "swc1 " + f3 + ", " + v1 + "\n";
-					   }
-				   }
-				   else {
-
-					   if(v2[0] == '#'){
-						   mc += "li.s"+ f1 + ", " + v2.substr(1, v2.length()) + "\n";
-					   }
-					   else if(v2[0] == '*'){
-						   mc += "lwc1 "+f2+", "+v2.substr(1, v2.length())+"\n";
-						   mc += "lwc1 "+f2+", "+"("+f2+")\n";
-					   }
-					   else{
-						   mc += "lwc1 "+f2+", "+v2+"\n";
-					   }
-					   if(v1[0] == '*'){
-						   mc += "lwc1 " + f1 + ", " + v1.substr(1, v1.length()) + "\n";
-						   mc += "swc1 " + f2 + ", (" + f1 + ")\n";  
-					   }
-					   else{
-						   mc += "swc1 " + f2 + ", " + v1 + "\n";
-					   }
-				   }
-			   }
-			   else if(eq == "=b"){
-				   if(v2[0] == '#'){
-					   mc += "li.s "+f2+", "+v2.substr(1, v2.length())+"\n";
-				   }
-				   else{
-					   mc += "lwc1 "+f2+", "+v2+"\n";
-				   }
-				   mc += "swc1 " + f2 + ", " + v1 + "\n";
-			   }
-			   else if(eq == "=c"){
-				   if(v2[0] == '#'){
-					   mc += "li "+reg2+", "+v2.substr(1, v2.length())+"\n";
-				   }
-				   else{
-					   mc += "lw "+reg2+", "+v2+"\n";
-				   }
-				   mc += "sw " + reg2 + ", " + v1 + "\n";
-			   }
-			   else if( eq == "=s")
-			   {
-				   if (tokens[2] == "strcat")
-				   {
-
-				   }
-				   else if(tokens[2] == "strcatc")
-				   {
-
-				   }
-				   else
-				   {
-					   string temp = v2.substr(1, v2.length());
-					   for( int i = 3 ; i < tokens.size() ; i++ )
-					   {
-						   temp += " " + tokens[i];
-					   }
-					   def += v1 + ": .asciiz " +temp + "\n";
-				   }
-
-			   }
-			   else if( eq == "=b")
-			   {
-				   if(tokens[2] == "not"){
-					   mc += "lw " + reg1 + ", " + v2;
-					   mc += "slti " + reg2 + ", " + reg1 + ", 1" + "\n";
-					   mc += "sw " + reg2 +", " + v2 + "\n";
-				   }
-			   }
-			   else if(eq == "=s"){
-				   if(tokens[3] == "strcat"){
-
-				   }
-				   else if(tokens[3] == "strcatc"){
-
-				   }
-			   }
-		}
-		*/
 		}
 
 	}
@@ -869,10 +892,11 @@ int main( int argcount, char* arguements[] )
 	mc = def + mc;
 	//cout<<mc;
 	file.close();
-	cout << "completed" << endl;
-	ofstream myfile("machine_code.txt");
+
+	ofstream myfile("machine.asm");
 	myfile << mc;
 	myfile.close();
+	return 0;
 }
 
 

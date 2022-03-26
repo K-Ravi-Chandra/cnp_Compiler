@@ -6,6 +6,7 @@
 #include<unordered_map>
 #include<vector>
 #include<stack>
+#include<unistd.h>
 
 using namespace std; 
 extern FILE* yyin;
@@ -69,7 +70,7 @@ int labelint = 1;
 //returns the name of a new temp variable, and also declares it as a variable in the temp code.
 char* getTemp( string type )
 {
-	string temp = "t_" + to_string(tempint);
+	string temp = "_t_" + to_string(tempint);
 	char* t = (char*) malloc((temp.length()-1)*sizeof(char));
 	strcpy(t, temp.c_str());
 	tempint++;		//increment tempint so that next time new temp variable is created.
@@ -80,7 +81,7 @@ char* getTemp( string type )
 //this one does the same thing except that it does not declare the variable.
 char* getTemp()
 {
-	string temp = "t_" + to_string(tempint);
+	string temp = "_t_" + to_string(tempint);
 	char* t = (char*) malloc((temp.length()-1)*sizeof(char));
 	strcpy(t, temp.c_str());
 	tempint++;
@@ -143,10 +144,17 @@ int insertEntry( string name, string dataType , vector<string> levels, bool arra
 
 	ste.name = name;
 	ste.dataType = dataType;
-	ste.size = 4;						//currently all variables are of same size.
-	ste.scope = scopeStack.top();		//the top of the stack contains the current scope
-	ste.levels = levels;
-	ste.array = array;
+	if( ste.dataType == "char" )
+	{
+		ste.size = 1;
+	}
+	else
+	{
+		ste.size = 4;
+	}
+	ste.scope = scopeStack.top();		//the top of the stack contains the current scope 
+	ste.levels = levels; 
+	ste.array = array; 
 	symbolTable.push_back(ste);
 
 	return 0;					//on success return 0.
@@ -159,7 +167,7 @@ void printSymbolTable()
 	cout << "name\tdatatype\tscope\tsize\tarray\tlevels" << endl;
 	for( int i = 0 ; i < symbolTable.size() ; i++ )
 	{
-		cout << symbolTable[i].name << "\t" << symbolTable[i].dataType << "\t" << symbolTable[i].scope << "\t" << symbolTable[i].size << "\t" << symbolTable[i].array << "\t";
+		cout << symbolTable[i].name << "\t" << symbolTable[i].dataType << "\t\t" << symbolTable[i].scope << "\t" << symbolTable[i].size << "\t" << symbolTable[i].array << "\t";
 		for( int j = 0 ; j < symbolTable[i].levels.size() ; j++ )
 		{
 			cout << symbolTable[i].levels[j] << " ";
@@ -262,7 +270,7 @@ symbolTableEntry getEntry( string name )
 	} array;
 };
 
-%token BREAK CHAR CONST CONTINUE ELSE ELIF FLOAT FOR IN IF INT RETURN SIZEOF VOID BOOL STRING ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN POW_ASSIGN INC_OP DEC_OP OR_OP AND_OP LE_OP GE_OP EQ_OP NE_OP C_CONST S_CONST B_CONST I_CONST F_CONST IDENTIFIER LET PRINT PRINTS SCAN MAIN
+%token BREAK CHAR CONST CONTINUE ELSE ELIF FLOAT FOR IN IF INT RETURN SIZEOF VOID BOOL STRING ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN POW_ASSIGN INC_OP DEC_OP OR_OP AND_OP LE_OP GE_OP EQ_OP NE_OP C_CONST S_CONST B_CONST I_CONST F_CONST IDENTIFIER LET PRINT PRINTS SCAN MAIN LEN
 
 %start begin
 
@@ -374,7 +382,12 @@ symbolTableEntry getEntry( string name )
 									
 												$<var.addr>$ = getTemp();
 
+												string tem($<var.addr>$);
+
 												code += string($<var.addr>$) + " =s #" + string($<str>1) + "\n";
+
+												$<var.addr>$ = getTemp("int");
+												code += "la " + string($<var.addr>$) + " " + tem + "\n";
 
 												if( parseDebug == 1 )
 												{
@@ -402,7 +415,7 @@ symbolTableEntry getEntry( string name )
 	postfix_expression
 		:	primary_expression				{
 												string addr($<var.addr>1);
-												if( addr[1] == '_' and addr[0] == 't' )
+												if( addr[0] == '_' )
 												{
 													$<array.addr>$ = $<var.addr>1;
 													$<array.type>$ = $<var.type>1;
@@ -424,12 +437,27 @@ symbolTableEntry getEntry( string name )
 														}
 													}
 													symbolTableEntry ste = getEntry(origname);
-													if( ste.array == false )
+													if( ste.array == false and ste.dataType != "string" )
 													{
 														$<array.addr>$ = $<var.addr>1;
 														$<array.type>$ = $<var.type>1;
 														$<array.index>$ = NULL;
 														$<array.completed>$ = 1;
+													}
+													else if( ste.dataType == "string" )
+													{
+														$<array.addr>$ = $<var.addr>1;
+
+														string tem = "char";
+														char* s = (char*) calloc(tem.length()-1, sizeof(char));
+														strcpy(s, tem.c_str());
+														$<array.type>$ = s;
+
+														$<array.completed>$ = 2;
+														$<array.level>$ = 0;
+														$<array.index>$ = getTemp("int");
+
+														code += string($<array.index>$) + " =i #0\n";
 													}
 													else
 													{
@@ -437,7 +465,7 @@ symbolTableEntry getEntry( string name )
 														$<array.type>$ = $<var.type>1;
 														$<array.completed>$ = 0;
 														$<array.level>$ = 0;
-														$<array.index>$ = getTemp(string($<var.type>1));
+														$<array.index>$ = getTemp("int");
 
 														code += string($<array.index>$) + " =i #0\n";
 													}
@@ -486,20 +514,31 @@ symbolTableEntry getEntry( string name )
 
 													code += "if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + " ) goto " +  label1 + "\n";
 													string var(getTemp());
-													code += var + " =s #" + "\"RUNTIME ERROR: Index out of Bounds\"\n";
-													code += "print string " + var + "\n";
+													code += var + " =s #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"\n";
+													string var1(getTemp("int"));
+													code += "la " + var1 +" " + var + "\n";
+													code += "print string " + var1 + "\n";
 													code += "exit\n";
 													code += label1 + ":\n";
 													code += "if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2 + "\n";
 													var = string(getTemp());
-													code += var + " =s #" + "\"RUNTIME ERROR: Index is negative\"\n";
-													code += "print string " + var + "\n";
+													code += var + " =s #" + "\"RUNTIME ERROR: Index is negative\\n\"\n";
+													var1 = string(getTemp("int"));
+													code += "la " + var1 +" " + var + "\n";
+													code += "print string " + var1 + "\n";
 													code += "exit\n";
 													code += label2 + ":\n";
 
 													string temp(getTemp("int"));
 
-													code += temp + " =i " + string($<var.addr>3) + " *i #" + to_string(ste.size) + "\n";
+													if( ste.dataType != "string" )
+													{
+														code += temp + " =i " + string($<var.addr>3) + " *i #" + to_string(ste.size) + "\n";
+													}
+													else
+													{
+														code += temp + " =i " + string($<var.addr>3) + " *i #" + to_string(1) + "\n";
+													}
 													$<array.index>$ = getTemp("int");
 
 													code += string($<array.index>$) + " =i " + string($<array.index>1) + " +i " + temp + "\n";
@@ -522,6 +561,8 @@ symbolTableEntry getEntry( string name )
 													string label1 = getLabel();
 													string label2 = getLabel();
 
+													if( ste.dataType != "string" )
+													{
 													code += "if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + " ) goto " +  label1 + "\n";
 													string var(getTemp());
 													code += var + " =s #" + "\"RUNTIME ERROR: Index out of Bounds\"\n";
@@ -534,6 +575,7 @@ symbolTableEntry getEntry( string name )
 													code += "print string " + var + "\n";
 													code += "exit\n";
 													code += label2 + ":\n";
+													}
 
 													string temp(getTemp("int"));
 
@@ -562,7 +604,7 @@ symbolTableEntry getEntry( string name )
 												}
 											}
 			| postfix_expression INC_OP		{
-												if( $<array.completed>$ == 1 )
+												if( $<array.completed>$ >= 1 )
 												{
 													if( strcmp($<array.type>1,"int") != 0 )
 													{
@@ -589,7 +631,7 @@ symbolTableEntry getEntry( string name )
 												}
 											}	
 			| postfix_expression DEC_OP		{
-												if( $<array.completed>$ == 1 )
+												if( $<array.completed>$ >= 1 )
 												{
 													if( strcmp($<array.type>1,"int") != 0 )
 													{
@@ -619,10 +661,20 @@ symbolTableEntry getEntry( string name )
 	unary_expression
 		:	postfix_expression				{	
 												//if the expression is complete then do the usual
-												if( $<array.completed>$ == 1 )
+												if( $<array.completed>$ >= 1 or strcmp($<array.type>1, "string") == 0)
 												{
 													$<var.addr>$ = $<array.addr>1;
-													$<var.type>$ = $<array.type>1;
+													if( $<array.completed>$ == 2 )
+													{
+														string temp = "string";
+														char* s = (char*) calloc(temp.size()-1, sizeof(char));
+														strcpy(s, temp.c_str());
+														$<var.type>$ = s;
+													}
+													else
+													{
+														$<var.type>$ = $<array.type>1;
+													}
 												}
 												//else the array is not referenced properly
 												else
@@ -649,6 +701,7 @@ symbolTableEntry getEntry( string name )
 												$<var.addr>$ = getTemp("int");
 												code += string($<var.addr>2) + " =i " + string($<var.addr>2) + " +i " + "#1\n";
 												code += string($<var.addr>$) + " =i " + string($<var.addr>2) + "\n";
+												$<var.type>$ = $<var.type>2;
 
 												if( parseDebug == 1 )
 												{
@@ -666,6 +719,7 @@ symbolTableEntry getEntry( string name )
 												$<var.addr>$ = getTemp("int");
 												code += string($<var.addr>2) + " =i " + string($<var.addr>2) + " -i " + "#1\n";
 												code += string($<var.addr>$) + " =i " + string($<var.addr>2) + "\n";
+												$<var.type>$ = $<var.type>2;
 												if( parseDebug == 1 )
 												{
 													cout << "unary_expr	-> DEC_OP unary_expr" << endl;
@@ -676,6 +730,7 @@ symbolTableEntry getEntry( string name )
 												$<var.type>$ = $<var.type>2;
 												string op($<str>1);
 												string type($<var.type>2); 
+												$<var.type>$ = $<var.type>2;
 
 												if( op == "+" or op == "-" )
 												{
@@ -714,6 +769,27 @@ symbolTableEntry getEntry( string name )
 												{
 													cout << "unary_expr	-> unary_op unary_expr" << endl;
 												}
+											}
+			| LEN '(' IDENTIFIER ')'		
+											{
+												symbolTableEntry ste = getEntry( string($<str>3) );
+												if( ste.name == "" )
+												{
+													cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
+													cout << "At line : " << yylineno << endl;
+													return -1;
+												}
+
+												string type = "int";
+												char* t = (char*) calloc(3, sizeof(char));
+												strcpy(t, type.c_str());
+												$<var.type>$ = t;
+
+												string temp = ste.levels[0];
+
+												$<var.addr>$ = getTemp("int");
+
+												code += string($<var.addr>$) + " =i " + temp + "\n";
 											}
 			;
 	
@@ -935,14 +1011,14 @@ symbolTableEntry getEntry( string name )
 												{
 													$<var.type>$ = $<var.type>1;
 													$<var.addr>$ = getTemp("string");
-													code += string($<var.addr>$) + " =s strcat ( " + string($<var.addr>1) + " ," +  string($<var.addr>3) + " )\n";
+													code += string($<var.addr>$) + " =s strcat " + string($<var.addr>1) + " " +  string($<var.addr>3) + " \n";
 												}
 												//if second operand is char then concatenate the char to the string.
 												else if( type1 == "string" and type2 == "char" )
 												{
 													$<var.type>$ = $<var.type>1;
 													$<var.addr>$ = getTemp("string");
-													code += string($<var.addr>$) + " =s strcatc ( " + string($<var.addr>1) + " ," +  string($<var.addr>3) + " )\n";
+													code += string($<var.addr>$) + " =s strcatc " + string($<var.addr>1) + " " +  string($<var.addr>3) + " \n";
 												}
 												//if second operand is int, then add add the int, to char ( ascii addition ).
 												else if( type1 == "char" and type2 == "int" )
@@ -955,6 +1031,9 @@ symbolTableEntry getEntry( string name )
 												else
 												{
 													cout << "COMPILETIME ERROR: Invalid Operands for +" << endl;
+													cout << code << endl;
+													cout << "type1 = " << type1 << " addr1 = " << $<var.addr>1 << endl;
+													cout << "type2 = " << type2 << " addr2 = " << $<var.addr>3 << endl;
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
@@ -1415,7 +1494,7 @@ symbolTableEntry getEntry( string name )
 										string type2 = rtype;
 										string var($<var.addr>1);
 										string val($<var.addr>3);
-
+												
 										//usual assignment rules.
 										if( op == "=" )
 										{
@@ -1427,7 +1506,7 @@ symbolTableEntry getEntry( string name )
 											{
 												code += var + " =f " + val + "\n";
 											}
-											else if( ltype == "string" and rtype == "string" )
+											else if( ltype == "string"  and rtype == "string" )
 											{
 												code += var + " =s " + val + "\n";
 											}
@@ -1449,7 +1528,6 @@ symbolTableEntry getEntry( string name )
 											{
 												cout << "COMPILETIME ERROR: different operands type to '='" << endl;
 												cout << "ltype = " << ltype << " rtype = " << rtype << endl;
-												printSymbolTable();
 												cout << "At line : " << yylineno << endl;
 												return -1;
 											}
@@ -1523,11 +1601,15 @@ symbolTableEntry getEntry( string name )
 											}
 											else if( type1 == "string" and type2 == "string" )
 											{
-													code += var + " =s strcat ( " + var + " , " +  val  + " )\n";
+												string str(getTemp("string"));
+												code += str + " =s strcat " + var + " " +  val  + " \n";
+												code += var + " =s " + str + "\n";
 											}
 											else if( type1 == "string" and type2 == "char" )
 											{
-													code += var + " =s strcatc ( " + var + " , " +  val  + " )\n";
+												string str(getTemp("string"));
+												code += str + " =s strcatc " + var + " " +  val  + " \n";
+												code += var + " =s " + str + "\n";
 											}
 											else if( type1 == "char" and type2 == "int" )
 											{
@@ -1567,15 +1649,20 @@ symbolTableEntry getEntry( string name )
 												//insert the variable into the symbol table entry.
 												vector<string> levels;
 												string var($<str>1);
+												string size(getTemp("int"));
+												if( dtype == "string" )
+												{
+													levels.push_back(size);
+												}
 												if( insertEntry(var, dtype, levels, false) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
-
 												symbolTableEntry ste = getEntry(var);
 												code += dtype + " " + ste.name + "_" + to_string(ste.scope) + "\n";
+												code += size + " =i #0\n";
 												
 												if( parseDebug == 1 )
 												{
@@ -1592,13 +1679,17 @@ symbolTableEntry getEntry( string name )
 												}
 												vector<string> levels;
 												string var($<str>1);
+												if( dtype == "string" )
+												{
+													string size(getTemp("int"));
+													levels.push_back(size);
+												}
 												if( insertEntry(var, dtype, levels, false) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
-
 												symbolTableEntry ste = getEntry(var);
 												code += dtype + " " + ste.name + "_" + to_string(ste.scope) + "\n"; 
 												if( dtype == "int" )
@@ -1620,6 +1711,7 @@ symbolTableEntry getEntry( string name )
 												else if( dtype == "string" )
 												{
 													code += ste.name + "_" + to_string(ste.scope) + " =s " + string($<var.addr>3) + "\n";
+													code += levels[0] + " =i len " + ste.name + "_" + to_string(ste.scope) + "\n";
 												}
 												
 												if( parseDebug == 1 )
@@ -1869,6 +1961,25 @@ symbolTableEntry getEntry( string name )
 										{
 											code += "scan float " + name + "\n";
 										}
+										if( string($<var.type>1) == "string" )
+										{
+											code += "scan string " + name + "\n";
+											string var = name;
+											string origname1 = "";
+												for( int i = 0 ; i < var.size() ; i++ )
+												{
+													if( var[i] != '_' )
+													{
+														origname1 += var[i];
+													}
+													else
+													{
+														break;
+													}
+												}
+												symbolTableEntry ste1 = getEntry(origname1);
+											code += ste1.levels[0] + " =i len " + name + "\n";
+										}
 									}	
 			;
 
@@ -2111,15 +2222,14 @@ int main( int argcount, char* arguements[] )
 
 	string filename(arguements[1]);
 
-	if( i == -1 )
+	if( i != 0 )
 	{
 		return 0;
 	}
-	
-	printSymbolTable();
 
-	//ofstream Myfile(filename + ".tmp");
-	ofstream Myfile("output.txt");
+	cout << "Successfully Completed Compiling" << endl;
+	string file = "file.temp";
+	ofstream Myfile(file);
 
 	Myfile << code;
 	Myfile.close();

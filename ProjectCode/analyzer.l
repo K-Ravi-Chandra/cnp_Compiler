@@ -10,11 +10,13 @@ letter			[a-zA-Z_]
 integer			[-]?{digits}|[+-]?({digits}(E|e)[+-]?{digits}) 
 drown			[-]?({digits}\.{digits})((E|e)[+-]?{digits})?
 char			'[a-zA-Z]?'
-string			\".*\"
+string			(\"([^"\\\n]|(\\['"\?\\abfnrtv]))*\")+
 bool			true|false
 identifier		{letter}({letter}|{digit})*
 
 %%
+"//".*				{
+					}
 "break"				{
 						if( DEBUG == 1) 
 							printf("BREAK : %s\n",yytext);
@@ -119,6 +121,11 @@ identifier		{letter}({letter}|{digit})*
 						if( DEBUG == 1) 
 							printf("MAIN : %s\n",yytext);
 						return MAIN;
+					}
+"len"				{
+						if( DEBUG == 1) 
+							printf("LEN : %s\n",yytext);
+						return LEN;
 					}
 "+="				{
 						if( DEBUG == 1) 
@@ -369,7 +376,6 @@ identifier		{letter}({letter}|{digit})*
 						}
 						yylineno++;
 					}
-
 {ws}+				{
 					}
 %%
