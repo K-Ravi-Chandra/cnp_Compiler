@@ -1,0 +1,174 @@
+primary_expression  :	IDENTIFIER
+                        | constant
+                        | '(' expression ')'
+                        ;
+
+constant            :	I_CONST	
+                        | F_CONST		
+                        | C_CONST	
+                        | S_CONST	
+                        | B_CONST 
+                        ;
+
+postfix_expression  :	primary_expression	
+                        | postfix_expression '[' expression ']'
+                        | postfix_expression INC_OP
+                        | postfix_expression DEC_OP
+                        ;
+
+unary_expression    :   postfix_expression 
+                        | INC_OP unary_expression
+                        | DEC_OP unary_expression
+                        | unary_operator unary_expression
+                        | LEN '(' IDENTIFIER ')'
+                        ;
+
+
+type_name           :   INT 
+                        | FLOAT
+                        | CHAR
+                        | STRING
+                        | BOOL
+                        | LET
+                        ;
+
+
+unary_operator     :     '+' 
+                        | '-'
+                        | '!'
+                        ;
+
+multiplicative_expression   :     unary_expression
+                                | multiplicative_expression '*' unary_expression
+                                | multiplicative_expression '/' unary_expression
+                                | multiplicative_expression '%' unary_expression
+                                ;
+                
+additive_expression         :     multiplicative_expression
+                                | additive_expression '+' multiplicative_expression
+                                | additive_expression '-' multiplicative_expression
+                                ;
+
+
+relational_expression       :     additive_expression 
+                                | relational_expression '<' additive_expression
+                                | relational_expression '>' additive_expression
+                                | relational_expression LE_OP additive_expression
+                                | relational_expression GE_OP additive_expression
+                                ;
+
+equality_expression         :     relational_expression
+                                | equality_expression EQ_OP relational_expression
+                                | equality_expression NE_OP relational_expression
+                                ;
+
+
+logical_and_expression      :     equality_expression 
+                                | logical_and_expression AND_OP equality_expression
+                                ;
+
+logical_or_expression       :     logical_and_expression 
+                                | logical_or_expression OR_OP logical_and_expression
+                                ;
+
+expression                  :     logical_or_expression 
+                                ;
+
+
+assignment_operator         :	 '='						
+                                | MUL_ASSIGN			
+                                | DIV_ASSIGN			
+                                | MOD_ASSIGN		
+                                | ADD_ASSIGN
+                                | SUB_ASSIGN		
+                                | POW_ASSIGN			
+                                ;
+
+
+assignment_operator         :    unary_expression assignment_operator expression ;
+
+
+
+declaration_expression      :    type_name declarationlist ;
+    
+
+declaration                 :    IDENTIFIER
+                                | IDENTIFIER '=' expression
+                                | IDENTIFIER brackets
+                                ;
+
+brackets                    :   '[' expression ']' brackets 
+                                | '[' expression ']'
+                                ;
+
+
+conditional_expression      :    IF '(' expression ')' '{' statement_list '}' else_statement  ;
+
+else_statement              :    ELIF  '(' expression ')'  '{' statementlist '}'  else_statement
+                                | ELSE '{' statement_list '}'
+                                |
+                                ;
+
+
+
+statement                   :     assignment_expression ';'
+                                | declaration_expression  ';'
+                                | conditional_expression
+                                | for_expression 
+                                | expression ;
+                                | IO_statement ;
+                                | flow_control_statements ';'
+                                ;
+
+
+flow_control_statements     :    BREAK   | CONTINUE | RETURN ;
+
+IO_statement                :    print_statement  | scan_statement ;
+
+scan_statement              :    unary_expression '=' SCAN '(' ')'
+
+print_statement             :     PRINT '(' print_args ')' 
+                                | PRINT  '(' ')'
+                                | PRINTS '(' print_args ')'
+                                ;
+
+
+print_args                  :    expression ',' print_args 
+                                | expression
+                                ;
+
+
+for_expression              :   FOR '(' 
+                                loop_initialization_list  ';'
+                                loop_condition ';'
+                                loop_increment_list ')' '{' statement_list '}' ;
+
+
+loop_initialization_list    :   assignment_expression ',' loop_initialization_list
+                                | assignment_expression
+                                | declaration_expression
+                                ;
+
+
+loop_condition              :   expression ;
+
+loop_increment_list         :   expression ';' loop_increment_list | expression ;
+
+
+statement_list              :   statement statement_list 
+                                | statement
+                                ;
+
+
+
+begin                       : VOID MAIN  '('  ')'  statement_block ;
+
+statement_block             : '{' statement_list '}'
+                                | '{' '}'
+                                ;
+
+                    
+
+
+
+
