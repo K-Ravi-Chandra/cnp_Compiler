@@ -1,0 +1,27 @@
+
+struct start complex
+
+function start add
+
+return result_2
+
+functon end
+
+
+struct end complex
+
+function start sum
+
+_t1 =i a_3 +i b_3
+return _t1
+
+functon end
+
+function start main
+
+_t2 =i c_4 +i d_4
+print int _t2
+print newline
+
+functon end
+

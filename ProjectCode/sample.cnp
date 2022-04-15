@@ -1,7 +1,15 @@
-var node
+var complex
 {
-	int a;
+	int real;
+	int complex;
+
+	var complex add( var complex c1, var complex c2 )
+	{
+		var complex result;
+		return result;
+	}
 }
+
 int sum( int a, int b )
 {
 	int t;
@@ -10,7 +18,8 @@ int sum( int a, int b )
 
 void main()
 {
-	print(sum(20,30));
+	int c, d;
+	print(c+d);
 }
 
 

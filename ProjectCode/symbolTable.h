@@ -7,55 +7,26 @@
 #include<unistd.h>
 using namespace std;
 
-//this string contains the entire temporary code, we generate the temporary code in incremental fashion.
 extern string TemporaryCode;
-
-extern string functionFrame;
-//All these below variables are global variables required because of the bottom-up parsing nature of yacc 
-//parser.( we require at some places for the information to pass from top to bottom ).
-
-//this variable is used to keep count the number of dimensions of the declared array while declaring.
 extern vector<string> declevels;
-
-//this variable stores the type of variable declared.
 extern string dtype;
-
-//this stack contains the goto address after executing one of the if blocks.
 extern stack<string> ifgoto;
-
-//this is used to store the variable that contains the address for loop expression 
 extern string forExprVal;
-
-//temporary variables are of the form "t_{tempint}". for example: t_1, t_22, tempint stores the numeber.
 extern int tempint;
-
-//this stack contains the list of addresses of start of the increment part of the for expression.
-//this is used when we encounter a continue statement.( we goto the address of the top of the stack).
 extern stack<string> forIncrement;
-
-//this stack contains the list of addresses of start of the code following the for expression.
-//this is used when we encounter a break statement.( we goto the address of the top of the stack). 
 extern stack<string> forNext;
-
-//labels are of the form "label{labelint}". for example: label1, lable30, labelint stores the number.
 extern int labelint;
-
-extern string currentFunctionName;
-
-
+extern string currentStruct;
+extern string currentFunction;
+extern string functionFrame;
+extern int currentScope;
+extern stack<int> scopeStack;
 
 char* getTemp( string type );
 char* getTemp();
 char* getLabel();
 
-//contains the current scope.
-extern int currentScope;
-
-//contains the heirarchy of scopes the current variable is in.( More detailed explanation about the scopes
-//is presented in the documentation.
-extern stack<int> scopeStack;
-
-class symbolTableEntry
+class SymbolTableEntry
 {
 	public:
 		string name;		//name of the variable.
@@ -67,36 +38,57 @@ class symbolTableEntry
 		int scope;			//scope in which it is defined and to which it belongs to.
 };
 
-//Symbol table( list of symboltable entries.)
-extern vector<symbolTableEntry> symbolTable;		
+class FunctionTable
+{
+	public:
+		string functionName;
+		SymbolTableEntry returnValue;
+		vector<SymbolTableEntry> parameters;
+		vector<SymbolTableEntry> table;
 
-extern vector<symbolTableEntry> currentSymbolTable;
+		FunctionTable(string name, string rType );
+		FunctionTable();
+};
 
-extern vector<pair<string, vector<symbolTableEntry>>> functionSymbolTable;
+class StructTable
+{
+	public:
+		string structName;
+		vector<SymbolTableEntry> attributes;
+		vector<FunctionTable> functions;
 
-//insert a new entry.
-int insertEntry( string variableName, string dataType , vector<string> levels, bool array);
+		StructTable( string name );
+		StructTable();
+};
 
+extern vector<StructTable> globalTable;
+
+int insertStruct( string structName );
+int insertAttribute( string structName, string variableName, string dataType, vector<string> levels);
 int insertFunction( string returnType, string functionName );
+int insertParam( string variableName, string dataType, vector<string>levels );
+int insertVariable( string variableName, string dataType, vector<string> levels );
 
-//a debugging tool to print the symbol table.
+int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels );
+int insertParam( string structName, string functionName, string variableName, string dataType, vector<string> levels );
+int insertFunction( string structName, string returnType, string functionName );
+
+SymbolTableEntry getStructAttribute( string structName, string variableName );
+FunctionTable getStructFunction( string structName, string functionName );
+SymbolTableEntry getVariable( string variableName );
+
+void appendCode( string statement );
 void printSymbolTable();
+SymbolTableEntry getFunctionReturnAddress(string structName, string functionName);
+
+
 
 /*
-//remove an entry from the table.
-int deleteEntry( string name, int scope );
-
-//delete all entries in the given scope
-int deleteEntries( int scope );
-*/
-
-//returns the symbol table entry with the given name, if there are multiple entries then return the entry
-//that has the highest scope.
+int insertEntry( string variableName, string dataType , vector<string> levels, bool array);
+int insertFunction( string returnType, string functionName );
+void printSymbolTable();
 symbolTableEntry getEntry(string name );
-
-//appends statement to TempCode
 void appendCode( string statement );
-
 void insertCurrentSymbolTable();
-
 symbolTableEntry getFunctionReturnAddress(string functionName);
+*/

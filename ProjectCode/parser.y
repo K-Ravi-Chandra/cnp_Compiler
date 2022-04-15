@@ -15,7 +15,7 @@ extern FILE* yyin;
 // these following three variables are used to enable debugging of the parsing, if they are set to one
 // then they print useful information.( this information is for developing purpose not for end users ).
 extern int DEBUG;		//to print information about tokeninzing
-int parseDebug = 1;		//to print information about parsing
+int parseDebug = 0;		//to print information about parsing
 int symbolDebug = 0;	//print the symbol table.
 
 //this contains the current lineno being parsed.
@@ -66,7 +66,7 @@ extern "C"
 	primary_expression								
 		:	IDENTIFIER						{	
 												//get the symbol table entry.
-												symbolTableEntry ste = getEntry(string($<str>1) );
+												SymbolTableEntry ste = getVariable(string($<str>1) );
 												if( ste.name == "" )
 												{
 													cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
@@ -224,7 +224,7 @@ extern "C"
 															break;
 														}
 													}
-													symbolTableEntry ste = getEntry(origname);
+													SymbolTableEntry ste = getVariable(origname);
 													if( ste.array == true )
 													{
 														$<array.addr>$ = $<var.addr>1;
@@ -317,7 +317,7 @@ extern "C"
 													}
 												}
 
-												symbolTableEntry ste = getEntry(origname);
+												SymbolTableEntry ste = getVariable(origname);
 												if( $<array.completed>1 == 2 )
 												{
 													appendCode("sting code");
@@ -496,7 +496,7 @@ extern "C"
 											}
 			| IDENTIFIER '(' ')'
 								{
-									symbolTableEntry ste = getFunctionReturnAddress(string($<str>1));
+									SymbolTableEntry ste = getFunctionReturnAddress("main", string($<str>1));
 
 									if( ste.name == "" )
 									{
@@ -520,7 +520,7 @@ extern "C"
 			| IDENTIFIER '(' argument_list ')'
 								{
 									cout << "completed deriving" << endl;
-									symbolTableEntry ste = getFunctionReturnAddress(string($<str>1));
+									SymbolTableEntry ste = getFunctionReturnAddress("main", string($<str>1));
 
 									if( ste.name == "" )
 									{
@@ -662,7 +662,7 @@ extern "C"
 											}
 			| LEN '(' IDENTIFIER ')'		
 											{
-												symbolTableEntry ste = getEntry(string($<str>3) );
+												SymbolTableEntry ste = getVariable(string($<str>3) );
 												if( ste.name == "" )
 												{
 													cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
@@ -1538,13 +1538,13 @@ extern "C"
 												//insert the variable into the symbol table entry.
 												vector<string> levels;
 												string var($<str>1);
-												if( insertEntry(var, dtype, levels, false) == -1 )
+												if( insertVariable(var, dtype, levels ) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
-												symbolTableEntry ste = getEntry(var);
+												SymbolTableEntry ste = getVariable(var);
 												//appendCode(dtype + " " + ste.name + "_" + to_string(ste.scope));
 												
 												if( parseDebug == 1 )
@@ -1562,13 +1562,13 @@ extern "C"
 												}
 												vector<string> levels;
 												string var($<str>1);
-												if( insertEntry(var, dtype, levels, false) == -1 )
+												if( insertVariable(var, dtype, levels) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
-												symbolTableEntry ste = getEntry( var);
+												SymbolTableEntry ste = getVariable( var);
 												//appendCode(dtype + " " + ste.name + "_" + to_string(ste.scope)); 
 												if( dtype == "int" )
 												{
@@ -1609,13 +1609,13 @@ extern "C"
 									appendCode(temp + " =i " + declevels[i]);
 									declevels[i] = temp;
 								}
-								if( insertEntry(var, dtype, declevels, true) == -1 )
+								if( insertVariable(var, dtype, declevels) == -1 )
 								{
 									cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 									cout << "At line : " << yylineno << endl;
 									return -1;
 								}
-								symbolTableEntry ste = getEntry(var);
+								SymbolTableEntry ste = getVariable(var);
 								
 								if( parseDebug == 1 )
 								{
@@ -1854,7 +1854,7 @@ extern "C"
 														break;
 													}
 												}
-												symbolTableEntry ste1 = getEntry(origname1);
+												SymbolTableEntry ste1 = getVariable(origname1);
 											appendCode(ste1.levels[0] + " =i len " + name);
 										}
 									}	
@@ -2049,6 +2049,10 @@ extern "C"
 			;
 
 	begin:
+		{
+			currentStruct = "main";
+			insertStruct(currentStruct);
+		}
 		blocks
 		;
 
@@ -2064,17 +2068,45 @@ extern "C"
 
 	struct_declaration:
 		VAR IDENTIFIER 
-						{ 
-		struct_declaration blocks
-							cout << "struct identifier" << endl;
-							}
-		'{' attributes '}'
+						{
+							cout << "derived var identifier" << endl;
+						}
+		'{' 
+						{
+							string structName = string($<str>2);
+							insertStruct( structName );
+							currentStruct = structName;
+							appendCode("struct start " + structName );
+							appendCode("");
+							currentScope++;
+							scopeStack.push(currentScope); 
+						}
+		attributes 
+						{
+							appendCode("");
+							appendCode("struct end " + string($<str>2) );
+							appendCode("");
+						}
+		'}'
+						{
+							scopeStack.pop();
+							currentStruct = "main";
+						}
 		;
 
 	attributes:
 		functionPrefix attributes
-		| declaration_expression attributes
+		| attribute attributes
 		|
+		;
+	
+	attribute:
+		type_name attributeList ';'
+		;
+	
+	attributeList:
+		IDENTIFIER ',' attributeList
+		| IDENTIFIER
 		;
 
 	functionPrefix:
@@ -2082,12 +2114,18 @@ extern "C"
 												{
 													appendCode("function start main");
 													appendCode("");
-													int res = insertFunction("void", "main");
-													if( res == -1 )
+													int res = insertFunction(currentStruct, "void", "main");
+													if( res == -2 )
 													{
 														cout << "COMPILETIME ERROR: " << "Redefinition of the function main" << endl;
 														return -1;
 													}
+													else if( res == -1 )
+													{
+														cout << "COMPILETIME ERROR: " << "Function Declaration prohibited" << endl;
+														return -1;
+													}
+													currentFunction = "main";
 													if( parseDebug == 1 )
 													{
 														cout << "function -> void main" << endl;
@@ -2095,23 +2133,28 @@ extern "C"
 												}
 		statement_block							
 												{
-													insertCurrentSymbolTable();
 													appendCode("");
-													appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
+													//appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
+													appendCode("functon end");
 													appendCode("");
-													printSymbolTable();
 												}
 		| VOID IDENTIFIER '('
 												{
 													string fname = string($<str>2);
 													appendCode("function start " + fname );
 													appendCode("");
-													int res = insertFunction("void", fname);
-													if( res == -1 )
+													int res = insertFunction(currentStruct, "void", fname);
+													if( res == -2 )
 													{
 														cout << "COMPILETIME ERROR: " << "Redefinition of the function " << fname << endl;
 														return -1;
 													}
+													else if( res == -1 )
+													{
+														cout << "COMPILETIME ERROR: " << "Function Declaration prohibited" << endl;
+														return -1;
+													}
+													currentFunction = fname;
 													currentScope++;
 													scopeStack.push(currentScope);
 												}
@@ -2121,12 +2164,18 @@ extern "C"
 													string fname = string($<str>2);
 													appendCode("function start " + fname );
 													appendCode("");
-													int res = insertFunction(dtype, fname);
-													if( res == -1 )
+													int res = insertFunction(currentStruct, dtype, fname);
+													if( res == -2 )
 													{
 														cout << "COMPILETIME ERROR: " << "Redefinition of the function " << fname << endl;
 														return -1;
 													}
+													else if( res == -1 )
+													{
+														cout << "COMPILETIME ERROR: " << "Function Declaration prohibited" << endl;
+														return -1;
+													}
+													currentFunction = fname;
 													currentScope++;
 													scopeStack.push(currentScope);
 												}
@@ -2141,11 +2190,10 @@ extern "C"
 												}
 		statement_block							
 												{
-													insertCurrentSymbolTable();
 													appendCode("");
-													appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
+													//appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
+													appendCode("functon end");
 													appendCode("");
-													printSymbolTable();
 												}
 		| ')'									
 												{
@@ -2154,11 +2202,10 @@ extern "C"
 												}
 		statement_block							
 												{
-													insertCurrentSymbolTable();
 													appendCode("");
-													appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
+													//appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
+													appendCode("functon end");
 													appendCode("");
-													printSymbolTable();
 												}
 		;
 
@@ -2167,18 +2214,20 @@ extern "C"
 											{
 												vector<string> levels;
 												string var($<str>2);
-												if( insertEntry(var, dtype, levels, false) == -1 )
+												int r = insertParam( var, dtype, levels );
+												if( insertParam(var, dtype, levels) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
+												cout << "derived first param = " << var << ", insertparam returned = " << r << endl;
 											}
 		| functionArguements ',' type_name IDENTIFIER
 											{
 												vector<string> levels;
 												string var($<str>4);
-												if( insertEntry(var, dtype, levels, false) == -1 )
+												if( insertParam(var, dtype, levels) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 													cout << "At line : " << yylineno << endl;
@@ -2229,11 +2278,13 @@ int main( int argcount, char* arguements[] )
 	}
 	
 	cout << "Successfully Completed Compiling" << endl;
-	cout << functionFrame << endl;
 	string file = "file.temp";
 	ofstream Myfile(file);
 
+	cout << "functionFrame = " << endl;
+	cout << functionFrame << endl;
 	TemporaryCode = functionFrame + "\n" + TemporaryCode;
+	printSymbolTable();
 	Myfile << TemporaryCode;
 	Myfile.close();
 	return 0;
