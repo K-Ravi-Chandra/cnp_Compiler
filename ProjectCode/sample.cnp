@@ -1,0 +1,16 @@
+var node
+{
+	int a;
+}
+int sum( int a, int b )
+{
+	int t;
+	return (a+b);
+}
+
+void main()
+{
+	print(sum(20,30));
+}
+
+

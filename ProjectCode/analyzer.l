@@ -127,6 +127,11 @@ identifier		{letter}({letter}|{digit})*
 							printf("LEN : %s\n",yytext);
 						return LEN;
 					}
+"var"				{
+						if( DEBUG == 1 )
+							printf("VAR : %s\n", yytext);
+						return VAR;
+					}
 "+="				{
 						if( DEBUG == 1) 
 							printf("ADD_ASSIGN : %s\n",yytext);
