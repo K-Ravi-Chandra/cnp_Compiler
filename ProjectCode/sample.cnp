@@ -1,25 +1,24 @@
-var complex
+int fibonacci( int n )
 {
-	int real;
-	int complex;
-
-	var complex add( var complex c1, var complex c2 )
+	if( n <= 0 )
 	{
-		var complex result;
-		return result;
+		return 0;
 	}
-}
+	elif( n == 1 )
+	{
+		return 1;
+	}
+	elif( n == 2 )
+	{
+		return 1;
+	}
 
-int sum( int a, int b )
-{
-	int t;
-	return (a+b);
+	return fibonacci(n-1) + fibonacci(n-2);
 }
 
 void main()
 {
-	int c, d;
-	print(c+d);
+	int n;
+	int res = fibonacci(n, n ,n);
+	print(res);
 }
-
-

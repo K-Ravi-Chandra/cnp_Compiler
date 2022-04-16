@@ -18,7 +18,6 @@ extern stack<string> forNext;
 extern int labelint;
 extern string currentStruct;
 extern string currentFunction;
-extern string functionFrame;
 extern int currentScope;
 extern stack<int> scopeStack;
 
@@ -42,6 +41,7 @@ class FunctionTable
 {
 	public:
 		string functionName;
+		string label;
 		SymbolTableEntry returnValue;
 		vector<SymbolTableEntry> parameters;
 		vector<SymbolTableEntry> table;
@@ -80,6 +80,9 @@ SymbolTableEntry getVariable( string variableName );
 void appendCode( string statement );
 void printSymbolTable();
 SymbolTableEntry getFunctionReturnAddress(string structName, string functionName);
+string getFunctionFrame();
+int setLabel(string functionName, string label);
+string getFunctionLabel(string structName, string functionName );
 
 
 

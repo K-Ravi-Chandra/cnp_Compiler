@@ -131,6 +131,7 @@ void printSymbolTable()
 				cout << functionTable[f].returnValue.levels[k] << " ";
 			}
 			cout << endl;
+			cout << "label = " << functionTable[f].label << endl;
 			cout << endl;
 		}
 	}
@@ -440,6 +441,107 @@ SymbolTableEntry  getVariable( string variableName )
 void appendCode( string statement )
 {
 	TemporaryCode += statement + "\n";
+}
+
+string getFunctionFrame()
+{
+	string res = "";
+	
+	for( int i = 0 ; i < globalTable.size() ; i++ )
+	{
+		res += "struct start " + globalTable[i].structName + "\n";
+
+		vector<SymbolTableEntry> table = globalTable[i].attributes;
+		for( int j = 0 ; j < table.size() ; j++ )
+		{
+			res += table[j].dataType + " " + to_string(table[j].size) + " " + table[j].name + "_" + to_string(table[j].scope) + " ";
+			for( int k = 0 ; k < table[j].levels.size() ; k++ )
+			{
+				res += table[j].levels[k] + " ";
+			}
+			res += "\n";
+		}
+		
+		vector<FunctionTable> functionTable = globalTable[i].functions;
+		for( int f = 0 ; f < functionTable.size() ; f++ )
+		{
+			res += "function start " + functionTable[f].functionName + "\n";
+
+			res += functionTable[f].returnValue.dataType + " " + to_string(functionTable[f].returnValue.size) + " " + functionTable[f].returnValue.name + "_" + to_string(functionTable[f].returnValue.scope) + " ";
+
+			for( int k = 0 ; k < functionTable[f].returnValue.levels.size() ; k++ )
+			{
+				res += functionTable[f].returnValue.levels[k] + " ";
+			}
+			res += "\n";
+
+			table = functionTable[f].parameters;
+			res += "param start\n";
+			for( int j = 0 ; j < table.size() ; j++ )
+			{
+				res += table[j].dataType + " " + to_string(table[j].size) + " " + table[j].name + "_" + to_string(table[j].scope) + " ";
+				for( int k = 0 ; k < table[j].levels.size() ; k++ )
+				{
+					res += table[j].levels[k] + " ";
+				}
+				res += "\n";
+			}
+			res += "param end\n";
+
+			table = functionTable[f].table;
+			for( int j = 0 ; j < table.size() ; j++ )
+			{
+				res += table[j].dataType + " " + to_string(table[j].size) + " " + table[j].name + "_" + to_string(table[j].scope) + " ";
+				for( int k = 0 ; k < table[j].levels.size() ; k++ )
+				{
+					res += table[j].levels[k] + " ";
+				}
+				res += "\n";
+			}
+			res += "function end\n\n";
+		}
+	}
+	return res;
+}
+
+int setLabel( string functionName, string label )
+{
+	for( int i = 0 ; i < globalTable.size() ; i++ )
+	{
+		if( globalTable[i].structName == currentStruct )
+		{
+			vector<FunctionTable> table = globalTable[i].functions;
+			for( int j = 0 ; j < table.size() ; j++ )
+			{
+				if( table[j].functionName == functionName )
+				{ 
+					globalTable[i].functions[j].label = label;
+					return 1;
+				}
+			}
+		}
+	}
+	return -1;
+}
+
+string getFunctionLabel( string structName, string functionName )
+{
+	string label = "";
+	for( int i = 0 ; i < globalTable.size() ; i++ )
+	{
+		if( globalTable[i].structName == structName )
+		{
+			vector<FunctionTable> table = globalTable[i].functions;
+			for( int j = 0 ; j < table.size() ; j++ )
+			{
+				if( table[j].functionName == functionName )
+				{ 
+					label = table[j].label;
+				}
+			}
+		}
+	}
+	return label;
 }
 
 /*

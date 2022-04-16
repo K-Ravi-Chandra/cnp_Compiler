@@ -1,13 +1,13 @@
 %{
 	#include "y.tab.h" 
 	#include<string.h>
-	int DEBUG = 0;
+	int DEBUG = 1;
 %}
 ws				[ \t\v\f]
 digit			[0-9]
 digits			{digit}+
 letter			[a-zA-Z_]
-integer			[-]?{digits}|[+-]?({digits}(E|e)[+-]?{digits}) 
+integer			{digits}|[+-]?({digits}(E|e)[+-]?{digits}) 
 drown			[-]?({digits}\.{digits})((E|e)[+-]?{digits})?
 char			'[a-zA-Z]?'
 string			(\"([^"\\\n]|(\\['"\?\\abfnrtv]))*\")+

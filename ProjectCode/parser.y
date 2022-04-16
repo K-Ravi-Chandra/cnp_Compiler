@@ -28,6 +28,7 @@ extern "C"
 	void yyerror(const char* s)
 	{
 		printf("%s at line: %d\n", s, yylineno);
+		printSymbolTable();
 		return;
 	}
 	int yywrap()
@@ -247,40 +248,6 @@ extern "C"
 														$<array.index>$ = NULL;
 														$<array.completed>$ = 1;
 													}
-													/*
-													if( ste.array == false and ste.dataType != "string" )
-													{
-														$<array.addr>$ = $<var.addr>1;
-														$<array.type>$ = $<var.type>1;
-														$<array.index>$ = NULL;
-														$<array.completed>$ = 1;
-													}
-													else if( ste.dataType == "string" )
-													{
-														$<array.addr>$ = $<var.addr>1;
-
-														string tem = "char";
-														char* s = (char*) calloc(tem.length()-1, sizeof(char));
-														strcpy(s, tem.c_str());
-														$<array.type>$ = s;
-
-														$<array.completed>$ = 2;
-														$<array.level>$ = 0;
-														$<array.index>$ = getTemp("int");
-
-														appendCode(string($<array.index>$) + " =i #0");
-													}
-													else
-													{
-														$<array.addr>$ = $<var.addr>1;
-														$<array.type>$ = $<var.type>1;
-														$<array.completed>$ = 0;
-														$<array.level>$ = 0;
-														$<array.index>$ = getTemp("int");
-
-														appendCode(string($<array.index>$) + " =i #0");
-													}
-													*/
 												}
 												
 												if( parseDebug == 1 )
@@ -494,7 +461,7 @@ extern "C"
 													cout << "postfix -> DEC_OP" << endl;
 												}
 											}
-			| IDENTIFIER '(' ')'
+			| IDENTIFIER '(' 
 								{
 									SymbolTableEntry ste = getFunctionReturnAddress("main", string($<str>1));
 
@@ -504,30 +471,14 @@ extern "C"
 										cout << "At line : " << yylineno << endl;
 										return 1;
 									}
-
-									$<array.completed>$ = 1;
-									char* t = (char*) calloc(ste.dataType.length()-1, sizeof(char));
-									strcpy(t, ste.dataType.c_str());
-									$<array.type>$ = t;
-
-									string var(getTemp(ste.dataType));
-
-									appendCode(var + " = "  + ste.name);
-									t = (char*) calloc(var.length()-1, sizeof(char));
-									strcpy(t, var.c_str());
-									$<array.addr>$ = t;
+									appendCode("funCall " + string($<str>1));
 								}
-			| IDENTIFIER '(' argument_list ')'
+			functionCall
 								{
-									cout << "completed deriving" << endl;
 									SymbolTableEntry ste = getFunctionReturnAddress("main", string($<str>1));
-
-									if( ste.name == "" )
-									{
-										cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
-										cout << "At line : " << yylineno << endl;
-										return 1;
-									}
+									
+									appendCode("call " + getFunctionLabel("main", string($<str>1)));
+									
 									$<array.completed>$ = 1;
 									char* t = (char*) calloc(ste.dataType.length()-1, sizeof(char));
 									strcpy(t, ste.dataType.c_str());
@@ -540,12 +491,51 @@ extern "C"
 									t = (char*) calloc(var.length()-1, sizeof(char));
 									strcpy(t, var.c_str());
 									$<array.addr>$ = t;
+
+									if( parseDebug == 1 )
+									{
+										cout << "functionCall -> ')'" << endl;
+									}
+									if( parseDebug == 1 )
+									{
+										cout << "postfix expr -> identifier '(' functionCall " << endl;
+									}
 								}
 			;
+	
+	functionCall:
+		')'						
+								{
+									if( parseDebug == 1 )
+									{
+										cout << "functionCall ->  ')'" << endl;
+									}
+								}
+		| argument_list ')'
+								{
+									if( parseDebug == 1 )
+									{
+										cout << "functionCall -> argument_list ')'" << endl;
+									}
+								}
 
 	argument_list
 		:	expression
+								{
+									if( parseDebug == 1 )
+									{
+										cout << "argumentlist -> expression" << endl;
+									}
+									appendCode("param " + string($<var.addr>1));
+								}
 			| argument_list ',' expression
+								{
+									if( parseDebug == 1 )
+									{
+										cout << "argumentlist -> argumentlist ',' expression" << endl;
+									}
+									appendCode("param " + string($<var.addr>1));
+								}
 			;
 	
 	unary_expression
@@ -680,6 +670,10 @@ extern "C"
 												$<var.addr>$ = getTemp("int");
 
 												appendCode(string($<var.addr>$) + " =i " + temp);
+												if( parseDebug == 1 )
+												{	
+													cout << "unary_expr -> len '(' identifier ')'" << endl;
+												}
 											}
 			;
 	
@@ -689,7 +683,7 @@ extern "C"
 			| CHAR						{   dtype = "char"; }
 			| STRING					{ 	dtype = "string"; }
 			| BOOL						{ 	dtype = "bool"; }
-			| VAR IDENTIFIER			{ 	dtype = "var";}
+			| VAR IDENTIFIER			{ 	dtype = string($<str>2);}
 			;
 
 	unary_operator
@@ -1784,6 +1778,10 @@ extern "C"
 								{
 									string returnVal($<var.addr>2);
 									appendCode("return " + returnVal);
+									if( parseDebug == 1 )
+									{
+										cout << "statement -> return expression" << endl;
+									}
 								}
 			;
 	
@@ -1893,6 +1891,16 @@ extern "C"
 											{
 												appendCode("print string " + string($<var.addr>1));
 											}
+											else if( string($<var.type>1) == "bool" )
+											{
+												appendCode("print bool " + string($<var.addr>1));
+											}
+											else
+											{
+												cout << "COMPILETIME ERROR: Cannot print Expression of type " << string($<var.type>1) << endl;
+												cout << "At Line " << yylineno << endl;
+												return -1;
+											}
 										}
 			print_args
 			| expression
@@ -1913,6 +1921,16 @@ extern "C"
 											else if( string($<var.type>1) == "string" )
 											{
 												appendCode("print string " + string($<var.addr>1));
+											}
+											else if( string($<var.type>1) == "bool" )
+											{
+												appendCode("print bool " + string($<var.addr>1));
+											}
+											else
+											{
+												cout << "COMPILETIME ERROR: Cannot print Expression of type " << string($<var.type>1) << endl;
+												cout << "At Line " << yylineno << endl;
+												return -1;
 											}
 										}
 			;
@@ -2069,23 +2087,17 @@ extern "C"
 	struct_declaration:
 		VAR IDENTIFIER 
 						{
-							cout << "derived var identifier" << endl;
 						}
 		'{' 
 						{
 							string structName = string($<str>2);
 							insertStruct( structName );
 							currentStruct = structName;
-							appendCode("struct start " + structName );
-							appendCode("");
 							currentScope++;
 							scopeStack.push(currentScope); 
 						}
 		attributes 
 						{
-							appendCode("");
-							appendCode("struct end " + string($<str>2) );
-							appendCode("");
 						}
 		'}'
 						{
@@ -2106,14 +2118,38 @@ extern "C"
 	
 	attributeList:
 		IDENTIFIER ',' attributeList
+								{
+									vector<string> levels;
+									int res = insertAttribute( currentStruct, string($<str>1), dtype, levels);
+									if( res == -2 )
+									{
+										cout << "COMPILETIME ERROR: Attribute with the given name already exists" << endl;
+										return -1;
+									}
+									else if( res == -1 )
+									{
+										cout << "COMPILETIME ERROR: Attribute declaration prohibited" << endl;
+									}
+								}
 		| IDENTIFIER
+								{
+									vector<string> levels;
+									int res = insertAttribute( currentStruct, string($<str>1), dtype, levels);
+									if( res == -2 )
+									{
+										cout << "COMPILETIME ERROR: Attribute with the given name already exists" << endl;
+										return -1;
+									}
+									else if( res == -1 )
+									{
+										cout << "COMPILETIME ERROR: Attribute declaration prohibited" << endl;
+									}
+								}
 		;
 
 	functionPrefix:
 		VOID MAIN '(' ')'
 												{
-													appendCode("function start main");
-													appendCode("");
 													int res = insertFunction(currentStruct, "void", "main");
 													if( res == -2 )
 													{
@@ -2126,6 +2162,10 @@ extern "C"
 														return -1;
 													}
 													currentFunction = "main";
+
+													string label = getLabel();
+													appendCode(label + ":");
+													setLabel(currentFunction, label);
 													if( parseDebug == 1 )
 													{
 														cout << "function -> void main" << endl;
@@ -2133,16 +2173,10 @@ extern "C"
 												}
 		statement_block							
 												{
-													appendCode("");
-													//appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
-													appendCode("functon end");
-													appendCode("");
 												}
 		| VOID IDENTIFIER '('
 												{
 													string fname = string($<str>2);
-													appendCode("function start " + fname );
-													appendCode("");
 													int res = insertFunction(currentStruct, "void", fname);
 													if( res == -2 )
 													{
@@ -2162,8 +2196,6 @@ extern "C"
 		| type_name IDENTIFIER '('
 												{
 													string fname = string($<str>2);
-													appendCode("function start " + fname );
-													appendCode("");
 													int res = insertFunction(currentStruct, dtype, fname);
 													if( res == -2 )
 													{
@@ -2181,31 +2213,28 @@ extern "C"
 												}
 		functionSuffix
 		;
-	
 	functionSuffix:
 		functionArguements ')'
 												{
 													currentScope--;
 													scopeStack.pop();
+													string label = getLabel();
+													appendCode(label + ":");
+													setLabel(currentFunction, label);
 												}
 		statement_block							
 												{
-													appendCode("");
-													//appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
-													appendCode("functon end");
-													appendCode("");
 												}
 		| ')'									
 												{
 													currentScope--;
 													scopeStack.pop();
+													string label = getLabel();
+													appendCode(label + ":");
+													setLabel(currentFunction, label);
 												}
 		statement_block							
 												{
-													appendCode("");
-													//appendCode("function end " + functionSymbolTable[functionSymbolTable.size()-1].first );
-													appendCode("functon end");
-													appendCode("");
 												}
 		;
 
@@ -2221,7 +2250,6 @@ extern "C"
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
-												cout << "derived first param = " << var << ", insertparam returned = " << r << endl;
 											}
 		| functionArguements ',' type_name IDENTIFIER
 											{
@@ -2281,9 +2309,9 @@ int main( int argcount, char* arguements[] )
 	string file = "file.temp";
 	ofstream Myfile(file);
 
-	cout << "functionFrame = " << endl;
-	cout << functionFrame << endl;
-	TemporaryCode = functionFrame + "\n" + TemporaryCode;
+	string functionFrame = getFunctionFrame();
+	TemporaryCode = functionFrame + "code starts\n" + TemporaryCode;
+
 	printSymbolTable();
 	Myfile << TemporaryCode;
 	Myfile.close();
