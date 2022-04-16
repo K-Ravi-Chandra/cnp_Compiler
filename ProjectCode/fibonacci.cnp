@@ -22,21 +22,3 @@ void main()
 	int res = fibonacci(n);
 	print(res);
 }
-
-var person
-{
-	string name;
-	int age;
-}
-
-var family
-{
-	var person father;
-	var person mother;
-	var person child;
-}
-
-void main()
-{
-	var family f1;
-}

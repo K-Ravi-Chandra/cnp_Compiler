@@ -132,6 +132,20 @@ identifier		{letter}({letter}|{digit})*
 							printf("VAR : %s\n", yytext);
 						return VAR;
 					}
+"NULL"				{
+						if( DEBUG == 1 )
+						{
+							printf("VAR : %s\n", yytext);
+						}
+						return NULL_;
+					}
+"new"				{
+						if( DEBUG == 1 )
+						{
+							printf("VAR : %s\n", yytext);
+						}
+						return NEW;
+					}
 "+="				{
 						if( DEBUG == 1) 
 							printf("ADD_ASSIGN : %s\n",yytext);

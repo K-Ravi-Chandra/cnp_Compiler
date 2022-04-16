@@ -1,0 +1,60 @@
+var stack
+{
+	int size;
+	int arr[];
+	int front;
+
+	void initialize()
+	{
+		size = 0;
+		front = 0;
+	}
+	void push( int value )
+	{
+		if( front == 100 )
+		{
+			return;
+		}
+		arr[front] = value;
+		front++;
+		size++;
+	}
+
+	int pop()
+	{
+		if( front == 0 )
+		{
+			return -1;
+		}
+		int value = arr[front-1];
+		front--;
+		size--;
+		return value;
+	}
+
+	void printStack()
+	{
+		for( int i = 0 ; i < front ; i++ )
+		{
+			prints(arr[front], " ");
+		}
+		print();
+	}
+}
+
+void printNUM()
+{
+	return;
+}
+
+void main()
+{
+	var stack st;
+	st.push(10);
+	st.push(5);
+	st.printStack();
+	st.pop();
+	st.printStack();
+
+	printNUM();
+}

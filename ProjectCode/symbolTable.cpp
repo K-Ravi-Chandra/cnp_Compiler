@@ -10,9 +10,11 @@
 
 using namespace std;
 
-string TemporaryCode = ""; string functionFrame = "";
+string TemporaryCode = ""; 
+string functionFrame = "";
 vector<string> declevels;
 string dtype;
+int dlevels;
 stack<string> ifgoto;
 string forExprVal;
 int tempint = 1;
@@ -22,13 +24,19 @@ int labelint = 1;
 string currentStruct;
 string currentFunction;
 int currentScope = 0;
+int starsCount = 0;
+bool newOrNot = false;
 stack<int> scopeStack;
+stack<SymbolTableEntry> callStack;
 
 
 //returns the name of a new temp variable, and also declares it as a variable in the temp code.
 char* getTemp( string type )
 {
 	string temp = "_t" + to_string(tempint);
+	vector<string> levels;
+	insertVariable(temp, type, levels, false);
+	temp += "_" + to_string(scopeStack.top());
 	char* t = (char*) malloc((temp.length()-1)*sizeof(char));
 	strcpy(t, temp.c_str());
 	tempint++;		//increment tempint so that next time new temp variable is created.
@@ -40,6 +48,9 @@ char* getTemp( string type )
 char* getTemp()
 {
 	string temp = "_t" + to_string(tempint);
+	vector<string> levels;
+	insertVariable(temp, "int", levels, false);
+	temp += "_" + to_string(scopeStack.top());
 	char* t = (char*) malloc((temp.length()-1)*sizeof(char));
 	strcpy(t, temp.c_str());
 	tempint++;
@@ -62,11 +73,42 @@ vector<StructTable> globalTable;
 
 int getSize( string dataType )
 {
+	int size = 0;
 	if( dataType == "char" )
 	{
-		return 1;
+		size = 1;
 	}
-	return 4;
+	else if( dataType == "int" )
+	{
+		size = 4;
+	}
+	else if( dataType == "string" )
+	{
+		size = 4;
+	}
+	else if( dataType == "bool" )
+	{
+		size = 1;
+	}
+	else if( dataType == "float" )
+	{
+		size = 4;
+	}
+	else
+	{
+		for( int i = 0 ; i < globalTable.size() ; i++ )
+		{
+			if( globalTable[i].structName == dataType )
+			{
+				vector<SymbolTableEntry> table = globalTable[i].attributes;
+				for( int j = 0 ; j < table.size() ; j++ )
+				{
+					size += getSize(table[j].dataType);
+				}
+			}
+		}
+	}
+	return size;
 }
 
 void printSymbolTable()
@@ -77,12 +119,12 @@ void printSymbolTable()
 	{
 		cout << "StructName = " << globalTable[i].structName << endl;
 		cout << "Attributes = " << endl;
-		cout << "name\tdatatype\tscope\tsize\tlevels" << endl;
+		cout << "name\tdatatype\tscope\tsize\tglobal\tlevels" << endl;
 
 		vector<SymbolTableEntry> table = globalTable[i].attributes;
 		for( int j = 0 ; j < table.size() ; j++ )
 		{
-			cout << table[j].name << "\t" << table[j].dataType << "\t\t" << table[j].scope << "\t" << table[j].size << "\t" << table[j].array << "\t";
+			cout << table[j].name << "\t" << table[j].dataType << "\t\t" << table[j].scope << "\t" << table[j].size << "\t" << table[j].global << "\t";
 			for( int k = 0 ; k < table[j].levels.size() ; k++ )
 			{
 				cout << table[j].levels[k] << " ";
@@ -101,7 +143,7 @@ void printSymbolTable()
 			table = functionTable[f].parameters;
 			for( int j = 0 ; j < table.size() ; j++ )
 			{
-				cout << table[j].name << "\t" << table[j].dataType << "\t\t" << table[j].scope << "\t" << table[j].size << "\t" << table[j].array << "\t";
+				cout << table[j].name << "\t" << table[j].dataType << "\t\t" << table[j].scope << "\t" << table[j].size << "\t" << table[j].global << "\t";
 				for( int k = 0 ; k < table[j].levels.size() ; k++ )
 				{
 					cout << table[j].levels[k] << " ";
@@ -114,7 +156,7 @@ void printSymbolTable()
 			table = functionTable[f].table;
 			for( int j = 0 ; j < table.size() ; j++ )
 			{
-				cout << table[j].name << "\t" << table[j].dataType << "\t\t" << table[j].scope << "\t" << table[j].size << "\t" << table[j].array << "\t";
+				cout << table[j].name << "\t" << table[j].dataType << "\t\t" << table[j].scope << "\t" << table[j].size << "\t" << table[j].global << "\t";
 				for( int k = 0 ; k < table[j].levels.size() ; k++ )
 				{
 					cout << table[j].levels[k] << " ";
@@ -123,8 +165,8 @@ void printSymbolTable()
 			}
 			cout << endl;
 			cout << "return = " << endl;
-			
-			cout << functionTable[f].returnValue.name << "\t" << functionTable[f].returnValue.dataType << "\t\t" << functionTable[f].returnValue.scope << "\t" << functionTable[f].returnValue.size << "\t" << functionTable[f].returnValue.array << "\t";
+
+			cout << functionTable[f].returnValue.name << "\t" << functionTable[f].returnValue.dataType << "\t\t" << functionTable[f].returnValue.scope << "\t" << functionTable[f].returnValue.size << "\t" << functionTable[f].returnValue.global << "\t";
 
 			for( int k = 0 ; k < functionTable[f].returnValue.levels.size() ; k++ )
 			{
@@ -207,6 +249,7 @@ int insertAttribute( string structName, string variableName, string dataType, ve
 			(*ste).name = variableName;
 			(*ste).dataType = dataType;
 			(*ste).size = getSize(dataType);
+			(*ste).levels = levels;
 			if( scopeStack.size() == 0 )
 			{
 				(*ste).scope = 0;
@@ -268,6 +311,7 @@ int insertParam( string structName, string functionName, string variableName, st
 					(*ste).name = variableName;
 					(*ste).dataType = dataType;
 					(*ste).size = getSize(dataType);
+					(*ste).levels = levels;
 					if( scopeStack.size() == 0 )
 					{
 						(*ste).scope = 0;
@@ -277,7 +321,7 @@ int insertParam( string structName, string functionName, string variableName, st
 						(*ste).scope = scopeStack.top();
 					}
 					globalTable[i].functions[j].parameters.push_back(*ste);
-					insertVariable( structName, functionName, variableName, dataType, levels);
+					insertVariable( structName, functionName, variableName, dataType, levels, false);
 					return 1;
 				}
 			}
@@ -287,7 +331,7 @@ int insertParam( string structName, string functionName, string variableName, st
 	return - 1;
 }
 
-int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels )
+int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels, bool global )
 {
 	for( int i = 0 ; i < globalTable.size() ; i++ )
 	{
@@ -310,6 +354,8 @@ int insertVariable( string structName, string functionName, string variableName,
 					(*ste).name = variableName;
 					(*ste).dataType = dataType;
 					(*ste).size = getSize(dataType);
+					(*ste).levels = levels;
+					(*ste).global = global;
 					if( scopeStack.size() == 0 )
 					{
 						(*ste).scope = 0;
@@ -340,9 +386,9 @@ int insertParam( string variableName, string dataType, vector<string> levels )
 	return insertParam( currentStruct, currentFunction, variableName, dataType, levels ); 
 }
 
-int insertVariable( string variableName, string dataType, vector<string> levels )
+int insertVariable( string variableName, string dataType, vector<string> levels, bool global )
 {
-	return insertVariable( currentStruct, currentFunction, variableName, dataType, levels );
+	return insertVariable( currentStruct, currentFunction, variableName, dataType, levels , global);
 }
 
 SymbolTableEntry getStructAttribute( string structName, string variableName ) 
@@ -393,6 +439,10 @@ SymbolTableEntry getFunctionReturnAddress( string structName, string functionNam
 
 SymbolTableEntry  getVariable( string structName, string functionName, string variableName )
 {
+	if( variableName.substr(0, 5) == "this." )
+	{
+		variableName = variableName.substr(5, variableName.size());
+	}
 	SymbolTableEntry ste;
 	for( int i = 0 ; i < globalTable.size() ; i++ )
 	{
@@ -428,6 +478,18 @@ SymbolTableEntry  getVariable( string structName, string functionName, string va
 					}
 				}
 			}
+			if( ste.name == "" )
+			{
+				vector<SymbolTableEntry> tab = globalTable[i].attributes;
+				for( int k = 0 ; k < tab.size() ; k++ )
+				{
+					if( tab[k].name == variableName )
+					{
+						ste = tab[k];
+						ste.name = "this." + ste.name;
+					}
+				}
+			}
 		}
 	}
 	return ste;
@@ -446,10 +508,10 @@ void appendCode( string statement )
 string getFunctionFrame()
 {
 	string res = "";
-	
+
 	for( int i = 0 ; i < globalTable.size() ; i++ )
 	{
-		res += "struct start " + globalTable[i].structName + "\n";
+		res += "struct start " + globalTable[i].structName + "\n\n";
 
 		vector<SymbolTableEntry> table = globalTable[i].attributes;
 		for( int j = 0 ; j < table.size() ; j++ )
@@ -461,11 +523,11 @@ string getFunctionFrame()
 			}
 			res += "\n";
 		}
-		
+
 		vector<FunctionTable> functionTable = globalTable[i].functions;
 		for( int f = 0 ; f < functionTable.size() ; f++ )
 		{
-			res += "function start " + functionTable[f].functionName + "\n";
+			res += "function start " + functionTable[f].functionName + "\n\n";
 
 			res += functionTable[f].returnValue.dataType + " " + to_string(functionTable[f].returnValue.size) + " " + functionTable[f].returnValue.name + "_" + to_string(functionTable[f].returnValue.scope) + " ";
 
@@ -491,15 +553,16 @@ string getFunctionFrame()
 			table = functionTable[f].table;
 			for( int j = 0 ; j < table.size() ; j++ )
 			{
-				res += table[j].dataType + " " + to_string(table[j].size) + " " + table[j].name + "_" + to_string(table[j].scope) + " ";
+				res += table[j].dataType + " " + to_string(table[j].size) + " " + table[j].name + "_" + to_string(table[j].scope) + " " + to_string(table[j].global) + " ";
 				for( int k = 0 ; k < table[j].levels.size() ; k++ )
 				{
 					res += table[j].levels[k] + " ";
 				}
 				res += "\n";
 			}
-			res += "function end\n\n";
+			res += "\nfunction end\n";
 		}
+		res += "\nstruct end\n\n";
 	}
 	return res;
 }
@@ -543,6 +606,52 @@ string getFunctionLabel( string structName, string functionName )
 	}
 	return label;
 }
+
+void setCallStack( string structName, string functionName )
+{
+	while( !callStack.empty() )
+	{
+		callStack.pop();
+	}
+	for( int i = 0 ; i < globalTable.size() ; i++ )
+	{
+		if( globalTable[i].structName == structName )
+		{
+			vector<FunctionTable> table = globalTable[i].functions;
+			for( int j = 0 ; j < table.size() ; j++ )
+			{
+				if( table[j].functionName == functionName )
+				{ 
+					for( int k = table[j].parameters.size()-1 ; k >= 0  ; k-- )
+					{
+						callStack.push(table[j].parameters[k]);
+					}
+				}
+			}
+		}
+	}
+	return;
+}
+
+bool checkMain()
+{
+	for( int i = 0 ; i < globalTable.size() ; i++ )
+	{
+		if( globalTable[i].structName == "main" )
+		{
+			vector<FunctionTable> table = globalTable[i].functions;
+			for( int j = 0 ; j < table.size() ; j++ )
+			{
+				if( table[j].functionName == "main" )
+				{ 
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 
 /*
    int main()
