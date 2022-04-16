@@ -1,0 +1,3 @@
+-while storing the array dimensions we are using a temp variable, use something unique so that it is not regarded as temp.
+-for printing new line character in print, don't use a seperate temp varaible
+-generalized symbol table for all functions
