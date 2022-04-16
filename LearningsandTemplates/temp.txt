@@ -1,0 +1,10 @@
+struct start main
+function start fibonacci
+int 4 _fibonacci_0
+param start
+int 4 n_1
+param end
+int 4 n_1
+int 4 t_1
+function end
+struct end
