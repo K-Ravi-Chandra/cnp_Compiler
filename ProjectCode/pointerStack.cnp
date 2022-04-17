@@ -52,7 +52,7 @@ var stack
 	void printStack()
 	{
 		var node* n;
-		for( ; n != NULL ; )
+		for( int i = 0 ; n != NULL ; i)
 		{
 			prints((*n).value, " ");
 			n = (*n).next;

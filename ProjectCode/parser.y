@@ -1755,12 +1755,12 @@ extern "C"
 												{
 													dtype = "*" + dtype;
 												}
-												if( dtype != string($<var.type>3) )
+												if( dtype != string($<var.type>4) )
 												{
 													cout << "COMPILETIME ERROR: cannot assign different variable types" << endl;
 													cout << "At line : " << yylineno << endl;
 													cout << "dtype = " << dtype << endl;
-													cout << "string($<var.type>3) = " << string($<var.type>3) << endl;
+													cout << "string($<var.type>4) = " << string($<var.type>4) << endl;
 													printSymbolTable();
 													cout << TemporaryCode << endl;
 													return -1;
@@ -1777,23 +1777,23 @@ extern "C"
 												//appendCode(dtype + " " + ste.name + "_" + to_string(ste.scope)); 
 												if( dtype == "int" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =i " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =i " + string($<var.addr>4));
 												}
 												else if( dtype == "float" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =f " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =f " + string($<var.addr>4));
 												}
 												else if( dtype == "bool" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =b " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =b " + string($<var.addr>4));
 												}
 												else if( dtype == "char" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =c " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =c " + string($<var.addr>4));
 												}
 												else if( dtype == "string" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =s " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =s " + string($<var.addr>4));
 												}
 												
 												if( parseDebug == 1 )
