@@ -15,7 +15,7 @@ extern FILE* yyin;
 // these following three variables are used to enable debugging of the parsing, if they are set to one
 // then they print useful information.( this information is for developing purpose not for end users ).
 extern int DEBUG;		//to print information about tokeninzing
-int parseDebug = 0;		//to print information about parsing
+int parseDebug = 1;		//to print information about parsing
 int symbolDebug = 0;	//print the symbol table.
 
 //this contains the current lineno being parsed.
@@ -29,6 +29,7 @@ extern "C"
 	{
 		printf("%s at line: %d\n", s, yylineno);
 		printSymbolTable();
+		cout << "temp code = " << TemporaryCode << endl;
 		return;
 	}
 	int yywrap()
@@ -59,19 +60,20 @@ extern "C"
 	} array;
 };
 
-%token BREAK CHAR CONST CONTINUE ELSE ELIF FLOAT FOR IN IF INT RETURN SIZEOF VOID BOOL STRING ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN POW_ASSIGN INC_OP DEC_OP OR_OP AND_OP LE_OP GE_OP EQ_OP NE_OP C_CONST S_CONST B_CONST I_CONST F_CONST IDENTIFIER LET PRINT PRINTS SCAN MAIN LEN VAR
+%token BREAK CHAR CONST CONTINUE ELSE ELIF FLOAT FOR IN IF INT RETURN SIZEOF VOID BOOL STRING ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN MOD_ASSIGN POW_ASSIGN INC_OP DEC_OP OR_OP AND_OP LE_OP GE_OP EQ_OP NE_OP C_CONST S_CONST B_CONST I_CONST F_CONST IDENTIFIER LET PRINT PRINTS SCAN MAIN LEN VAR NULL_ NEW
 
 %start begin
 
 %%
 	primary_expression								
 		:	IDENTIFIER						{	
-												//get the symbol table entry.
 												SymbolTableEntry ste = getVariable(string($<str>1) );
 												if( ste.name == "" )
 												{
 													cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
 													cout << "At line : " << yylineno << endl;
+													printSymbolTable();
+													cout << TemporaryCode << endl;
 													return -1;
 												}
 
@@ -108,6 +110,20 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "primary_expression -> ( expression )" << endl;
+												}
+											}
+			| NULL_							{
+												string type = "NULL";
+												char* t = (char*) calloc(type.length(), sizeof(char));
+												strcpy(t, type.c_str());
+												$<var.type>$ = t;
+
+												$<var.addr>$ = getTemp();
+												appendCode(string($<var.addr>$) + " =i #0");
+
+												if( parseDebug == 1 )
+												{
+													cout << "primary_expression -> IDENTIFIER" << endl;
 												}
 											}
 			; 
@@ -226,7 +242,7 @@ extern "C"
 														}
 													}
 													SymbolTableEntry ste = getVariable(origname);
-													if( ste.array == true )
+													if( ste.levels.size() != 0 )
 													{
 														$<array.addr>$ = $<var.addr>1;
 														$<array.type>$ = $<var.type>1;
@@ -261,6 +277,13 @@ extern "C"
 												{
 													cout << "COMPILETIME ERROR: Cannot index a non-array type" << endl;
 													cout << "At line : " << yylineno << endl;
+													cout << "Temp code " << TemporaryCode << endl;
+													cout << "symbolTable" << endl;
+													printSymbolTable();
+													cout << "arrar.completed = " << $<array.completed>1 << endl;
+													cout << "array.addr = " << string($<array.addr>1) << endl;
+													cout << "array.type = " << string($<array.type>1) << endl;
+													cout << "array.levels = " << $<array.level>1 << endl;
 													return -1;
 												}
 												if( string($<var.type>3) != "int" )
@@ -277,6 +300,10 @@ extern "C"
 													if( addr[i] != '_' )
 													{
 														origname += addr[i];
+													}
+													else if( addr[i] == '.' )
+													{
+														origname = "";
 													}
 													else
 													{
@@ -324,8 +351,6 @@ extern "C"
 												}
 												else if( $<array.level>1 ==  ste.levels.size()-1 )
 												{
-													cout << "Entered array.level == ste.levels.size()-1" << endl;
-
 													if( $<array.completed>1 != 2 and false)
 													{
 														string label1 = getLabel();
@@ -461,6 +486,76 @@ extern "C"
 													cout << "postfix -> DEC_OP" << endl;
 												}
 											}
+			| postfix_expression '.' IDENTIFIER
+											{
+												SymbolTableEntry ste = getStructAttribute( string($<array.type>1), string($<str>3));
+												if( ste.name == "" )
+												{
+													cout << "COMPILETIME ERROR: type " << string($<array.type>1) << " doesn't have an attribute " << string($<str>3) << endl;
+													return -1;
+												}
+
+												char* t = (char*) calloc(ste.dataType.length()-1, sizeof(char));
+												strcpy(t, ste.dataType.c_str());
+												$<array.type>$ = t;
+												
+												string addr = string($<array.addr>1) + "." + string($<str>3);
+												t = (char*) calloc(addr.length()-1, sizeof(char));
+												strcpy(t, addr.c_str());
+
+												$<array.addr>$ = t;
+												$<array.completed>$ = 1;
+
+												cout << "array.type  = " << string($<array.type>$) << endl;
+												cout << "array.addr = " << string($<array.addr>$) << endl;
+											}
+			| postfix_expression '.' IDENTIFIER '('
+								{
+									SymbolTableEntry ste = getFunctionReturnAddress(string($<array.type>1), string($<str>3));
+
+									if( ste.name == "" )
+									{
+										cout << "COMPILETIME ERROR: Type " << string($<array.type>1) << " doesn't have a method " << string($<str>3) << endl;
+										cout << "At line : " << yylineno << endl;
+										return 1;
+									}
+									appendCode("funCall " + string($<array.type>1) + "." + string($<str>3));
+									setCallStack(string($<array.type>1), string($<str>3));
+									appendCode("param " + string($<array.addr>1));
+									if( parseDebug == 1 )
+									{
+										cout << "postifx_expression -> postifix . identifier '('" << endl;
+									}
+								}
+			functionCall		{
+									SymbolTableEntry ste = getFunctionReturnAddress(string($<array.type>1), string($<str>3));
+
+									if( !callStack.empty() )
+									{
+										cout << "COMPILETIME ERROR: Too few arguments" << endl;
+										return -1;
+									}
+									
+									appendCode("call " + getFunctionLabel(string($<array.type>1), string($<str>1)));
+									
+									$<array.completed>$ = 1;
+									char* t = (char*) calloc(ste.dataType.length()-1, sizeof(char));
+									strcpy(t, ste.dataType.c_str());
+									$<array.type>$ = t;
+
+									string var(getTemp(ste.dataType));
+
+									appendCode(var + " = returnVal");
+
+									t = (char*) calloc(var.length()-1, sizeof(char));
+									strcpy(t, var.c_str());
+									$<array.addr>$ = t;
+
+									if( parseDebug == 1 )
+									{
+										cout << "postfix expr -> postfix . identifier '(' functionCall " << endl;
+									}
+								}
 			| IDENTIFIER '(' 
 								{
 									SymbolTableEntry ste = getFunctionReturnAddress("main", string($<str>1));
@@ -471,11 +566,22 @@ extern "C"
 										cout << "At line : " << yylineno << endl;
 										return 1;
 									}
-									appendCode("funCall " + string($<str>1));
+									appendCode("funCall main." + string($<str>1));
+									setCallStack("main", string($<str>1));
+									if( parseDebug == 1 )
+									{
+										cout << "postfix -> identifier '('" << endl;
+									}
 								}
 			functionCall
 								{
 									SymbolTableEntry ste = getFunctionReturnAddress("main", string($<str>1));
+
+									if( !callStack.empty() )
+									{
+										cout << "COMPILETIME ERROR: Too few arguments" << endl;
+										return -1;
+									}
 									
 									appendCode("call " + getFunctionLabel("main", string($<str>1)));
 									
@@ -486,7 +592,7 @@ extern "C"
 
 									string var(getTemp(ste.dataType));
 
-									appendCode(var + " = "  + ste.name);
+									appendCode(var + " = returnVal");
 
 									t = (char*) calloc(var.length()-1, sizeof(char));
 									strcpy(t, var.c_str());
@@ -516,6 +622,8 @@ extern "C"
 									if( parseDebug == 1 )
 									{
 										cout << "functionCall -> argument_list ')'" << endl;
+										printSymbolTable();
+										cout << "Temp code = " << TemporaryCode << endl;
 									}
 								}
 
@@ -527,6 +635,18 @@ extern "C"
 										cout << "argumentlist -> expression" << endl;
 									}
 									appendCode("param " + string($<var.addr>1));
+									if( callStack.empty() )
+									{
+										cout << "COMPILETIME ERROR: Too many arguments" << endl;
+										return -1;
+									}
+									else if( string($<var.type>1) != callStack.top().dataType )
+									{
+										cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
+										cout << "Given parameter is of type " << string($<var.type>1) << ", required parameter is of type " << callStack.top().dataType << endl;
+										return -1;
+									}
+									callStack.pop();
 								}
 			| argument_list ',' expression
 								{
@@ -535,6 +655,18 @@ extern "C"
 										cout << "argumentlist -> argumentlist ',' expression" << endl;
 									}
 									appendCode("param " + string($<var.addr>1));
+									if( callStack.empty() )
+									{
+										cout << "COMPILETIME ERROR: Too many arguments" << endl;
+										return -1;
+									}
+									else if( string($<var.type>1) != callStack.top().dataType )
+									{
+										cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
+										cout << "Given parameter is of type " << string($<var.type>1) << ", required parameter is of type " << callStack.top().dataType << endl;
+										return -1;
+									}
+									callStack.pop();
 								}
 			;
 	
@@ -625,7 +757,7 @@ extern "C"
 													{
 														if( op == "-" )
 														{
-															$<var.addr>$ = getTemp();
+															$<var.addr>$ = getTemp("int");
 															appendCode(string($<var.addr>$) + " = " + "minus " + string($<var.addr>2));
 														}
 													}
@@ -641,10 +773,39 @@ extern "C"
 													}
 													else
 													{
-														$<var.addr>$ = getTemp();
+														$<var.addr>$ = getTemp("bool");
 														appendCode(string($<var.addr>$) + " = " + "not " + string($<var.addr>2));
 													}
 												}	
+												if( op == "*" )
+												{
+													if( type[0] != '*' )
+													{
+														cout << "COMPILETIME ERROR: cannot apply * to non-pointer type" << endl;
+														cout << "At line : " << yylineno << endl;
+														return -1;
+													}
+													else
+													{
+														string temp = type.substr(1, type.size());
+														$<var.addr>$ = getTemp(temp);
+														
+														char* i = (char*) calloc(temp.length()-1, sizeof(char));
+														strcpy(i, temp.c_str());
+														$<var.type>$ = i;
+														appendCode(string($<var.addr>$) + " = *" + string($<var.addr>2)); 
+													}
+												}
+												if( op == "&" ) 
+												{
+														string temp = "*" + type;
+														$<var.addr>$ = getTemp(temp);
+														
+														char* i = (char*) calloc(temp.length()-1, sizeof(char));
+														strcpy(i, temp.c_str());
+														$<var.type>$ = i;
+														appendCode(string($<var.addr>$) + " = &" + string($<var.addr>2)); 
+												}
 												if( parseDebug == 1 )
 												{
 													cout << "unary_expr	-> unary_op unary_expr" << endl;
@@ -678,12 +839,12 @@ extern "C"
 			;
 	
 	type_name		
-		:	INT							{	dtype = "int"; 	}			//set the dtypes for declaration purposes.	
-			| FLOAT						{	dtype = "float";}
-			| CHAR						{   dtype = "char"; }
-			| STRING					{ 	dtype = "string"; }
-			| BOOL						{ 	dtype = "bool"; }
-			| VAR IDENTIFIER			{ 	dtype = string($<str>2);}
+		:	INT							{	dtype = "int"; 	starsCount = 0; newOrNot = false;}			//set the dtypes for declaration purposes.	
+			| FLOAT						{	dtype = "float";starsCount = 0; newOrNot = false;}
+			| CHAR						{   dtype = "char";starsCount = 0; newOrNot = false; }
+			| STRING					{ 	dtype = "string";starsCount = 0; newOrNot = false;}
+			| BOOL						{ 	dtype = "bool";starsCount = 0; newOrNot = false; }
+			| VAR IDENTIFIER			{ 	dtype = string($<str>2);starsCount = 0; newOrNot = false;}
 			;
 
 	unary_operator
@@ -706,6 +867,20 @@ extern "C"
 								if( parseDebug == 1 )
 												{
 													cout << "unary_op -> !" << endl;
+												}
+							}
+			| '*'			{
+								$<str>$ = $<str>1;
+								if( parseDebug == 1 )
+												{
+													cout << "unary_op -> *" << endl;
+												}
+							}
+			| '&'			{
+								$<str>$ = $<str>1;
+								if( parseDebug == 1 )
+												{
+													cout << "unary_op -> &" << endl;
 												}
 							}
 			;
@@ -1163,7 +1338,7 @@ extern "C"
 												string type2($<var.type>3);
 												
 												//can compare only equal types.
-												if( type1 != type2 )
+												if( type1 != type2 and !(type1[0] == '*' and type2 == "NULL") )
 												{
 													cout << "COMPILETIME ERROR: cannot compare two different type of operands" << endl;
 													cout << "At line : " << yylineno << endl;
@@ -1198,6 +1373,10 @@ extern "C"
 												{
 													appendCode("if ( " + string($<var.addr>1) + " ==s " + string($<var.addr>3) + " ) goto " + string(label1));
 												}
+												else if( type1[0] == '*' )
+												{
+													appendCode("if ( " + string($<var.addr>1) + " ==i " + string($<var.addr>3) + " ) goto " + string(label1));
+												}
 
 												appendCode(string($<var.addr>$) + " =b #false");
 												appendCode("goto " + string(label2));
@@ -1216,7 +1395,7 @@ extern "C"
 												string type1($<var.type>1);
 												string type2($<var.type>3);
 
-												if( type1 != type2 )
+												if( type1 != type2 and !(type1[0] == '*' and type2 == "NULL") )
 												{
 													cout << "COMPILETIME ERROR: cannot compare two different type of operands" << endl;
 													cout << "At line : " << yylineno << endl;
@@ -1250,6 +1429,10 @@ extern "C"
 												else if( type1 == "string" )
 												{
 													appendCode("if ( " + string($<var.addr>1) + " !=s " + string($<var.addr>3) + " ) goto " + string(label1));
+												}
+												else if( type1[0] == '*' )
+												{
+													appendCode("if ( " + string($<var.addr>1) + " ==i " + string($<var.addr>3) + " ) goto " + string(label1));
 												}
 
 												appendCode(string($<var.addr>$) + " =b #false");
@@ -1325,7 +1508,7 @@ extern "C"
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
-												$<var.addr>$ = getTemp();
+												$<var.addr>$ = getTemp("bool");
 												$<var.type>$ = $<var.type>1;
 
 												char* label1 = getLabel();
@@ -1407,6 +1590,14 @@ extern "C"
 												appendCode(string(t) + " =f " + "elevateToFloat ( " + val + " )");
 												appendCode(var + " =f " + string(t));
 											}
+											else if( ltype[0] == '*' and rtype == "NULL" )
+											{
+												appendCode(var + " =i #0");
+											}
+											else if( ltype == rtype )
+											{
+												appendCode(var + " =i " + val);
+											}
 											else
 											{
 												cout << "COMPILETIME ERROR: different operands type to '='" << endl;
@@ -1454,7 +1645,7 @@ extern "C"
 												}
 												else if( type1 == "float" and type2 == "int" )
 												{
-													char* temp = getTemp();
+													char* temp = getTemp("float");
 													appendCode(string(temp) + " = elevateToFloat ( " + val + " )");
 													appendCode(var + " =f " + var + " " + op[0] + "f " +  string(temp));
 												}
@@ -1514,7 +1705,15 @@ extern "C"
 
 
 	declaration_expression
-		:	type_name declarationlist		{
+		:	NEW type_name declarationlist	
+											{
+												if( parseDebug == 1 )
+												{
+													cout << "declaration expr -> NEW typename declarationlist" << endl;
+												}
+											}
+			| type_name declarationlist
+											{
 												if( parseDebug == 1 )
 												{
 													cout << "declaration expr -> typename declarationlist" << endl;
@@ -1523,16 +1722,20 @@ extern "C"
 			;
 	
 	declarationlist
-		: 	declaration ',' declarationlist		
-			| declaration
+			:	declaration ',' declarationlist		
+			|	declaration
 			;
 	
 	declaration
-		:	IDENTIFIER						{
+		:	stars IDENTIFIER						{
 												//insert the variable into the symbol table entry.
 												vector<string> levels;
-												string var($<str>1);
-												if( insertVariable(var, dtype, levels ) == -1 )
+												for( int i = 0 ; i < starsCount ; i++ )
+												{
+													dtype = "*" + dtype;
+												}
+												string var($<str>2);
+												if( insertVariable(var, dtype, levels, newOrNot ) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 													cout << "At line : " << yylineno << endl;
@@ -1546,17 +1749,25 @@ extern "C"
 													cout << "declaration -> identifier" << endl;
 												}
 											}
-			| IDENTIFIER '=' expression		{
+			| stars IDENTIFIER '=' expression		{
 												//along with declaration, assign the variables with values.
-												if( dtype != string($<var.type>3) )
+												for( int i = 0 ; i < starsCount ; i++ )
+												{
+													dtype = "*" + dtype;
+												}
+												if( dtype != string($<var.type>4) )
 												{
 													cout << "COMPILETIME ERROR: cannot assign different variable types" << endl;
 													cout << "At line : " << yylineno << endl;
+													cout << "dtype = " << dtype << endl;
+													cout << "string($<var.type>4) = " << string($<var.type>4) << endl;
+													printSymbolTable();
+													cout << TemporaryCode << endl;
 													return -1;
 												}
 												vector<string> levels;
-												string var($<str>1);
-												if( insertVariable(var, dtype, levels) == -1 )
+												string var($<str>2);
+												if( insertVariable(var, dtype, levels, newOrNot) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 													cout << "At line : " << yylineno << endl;
@@ -1566,23 +1777,23 @@ extern "C"
 												//appendCode(dtype + " " + ste.name + "_" + to_string(ste.scope)); 
 												if( dtype == "int" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =i " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =i " + string($<var.addr>4));
 												}
 												else if( dtype == "float" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =f " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =f " + string($<var.addr>4));
 												}
 												else if( dtype == "bool" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =b " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =b " + string($<var.addr>4));
 												}
 												else if( dtype == "char" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =c " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =c " + string($<var.addr>4));
 												}
 												else if( dtype == "string" )
 												{
-													appendCode(ste.name + "_" + to_string(ste.scope) + " =s " + string($<var.addr>3));
+													appendCode(ste.name + "_" + to_string(ste.scope) + " =s " + string($<var.addr>4));
 												}
 												
 												if( parseDebug == 1 )
@@ -1590,7 +1801,7 @@ extern "C"
 													cout << "declaration -> identifier = expression" << endl;
 												}
 											}
-			| IDENTIFIER 
+			| stars IDENTIFIER 
 							{
 								declevels.clear();
 							}
@@ -1599,11 +1810,11 @@ extern "C"
 								string var($<str>1);
 								for( int i = 0 ; i < declevels.size() ; i++ )
 								{
-									string temp = "_" + var + "_" + to_string(i+1); 
+									string temp = "_" + var + "_" + to_string(scopeStack.top()) + "_" + to_string(i+1); 
 									appendCode(temp + " =i " + declevels[i]);
 									declevels[i] = temp;
 								}
-								if( insertVariable(var, dtype, declevels) == -1 )
+								if( insertVariable(var, dtype, declevels, newOrNot) == -1 )
 								{
 									cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 									cout << "At line : " << yylineno << endl;
@@ -1617,6 +1828,17 @@ extern "C"
 								}
 							}
 			;
+	stars:
+		'*' stars
+						{
+							if( parseDebug == 1 )
+							{
+								cout << "stars -> '*' stars" << endl;
+							}
+							starsCount++;
+						}
+		|
+		;
 
 	brackets
 		:	'[' expression ']'
@@ -1781,6 +2003,14 @@ extern "C"
 									if( parseDebug == 1 )
 									{
 										cout << "statement -> return expression" << endl;
+									}
+								}
+			| RETURN ';'
+								{
+									appendCode("return VOID");
+									if( parseDebug == 1 )
+									{
+										cout << "statement -> return" << endl;
 									}
 								}
 			;
@@ -2103,48 +2333,71 @@ extern "C"
 						{
 							scopeStack.pop();
 							currentStruct = "main";
+							if( parseDebug == 1 )
+							{
+								cout << "struct _declaration -> var identifier '{' attributes '}'" << endl;
+							}
 						}
 		;
 
 	attributes:
 		functionPrefix attributes
+						{
+							if( parseDebug == 1 )
+							{
+								cout << "attributes -> functionPrefix attributes" << endl;
+							}
+						}
 		| attribute attributes
+						{
+							if( parseDebug == 1 )
+							{
+								cout << "attributes -> attribute attributes" << endl;
+							}
+						}
 		|
 		;
 	
 	attribute:
-		type_name attributeList ';'
+		type_name stars IDENTIFIER 
+									{
+										dlevels = 0;
+										
+									}
+		dimensions ';'
+									{
+										vector<string> levels;
+										for( int i = 0 ; i < starsCount ; i++ )
+										{
+											dtype = "*" + dtype;
+										}
+										for( int i = 1 ; i <= dlevels; i++ )
+										{
+											levels.push_back(string($<str>3) + "_" + to_string(scopeStack.top()) + "_" + to_string(i));
+										}
+										int res = insertAttribute( currentStruct, string($<str>3), dtype, levels);
+										if( res == -2 )
+										{	
+											cout << "COMPILETIME ERROR: Attribute with the given name already exists" << endl;
+											return -1;
+										}
+										else if( res == -1 )
+										{
+											cout << "COMPILETIME ERROR: Attribute declaration prohibited" << endl;
+										}
+										if( parseDebug == 1 )
+										{
+											cout << "attribute -> typename stars identifier dimensions" << endl;
+										}
+									}
 		;
 	
-	attributeList:
-		IDENTIFIER ',' attributeList
-								{
-									vector<string> levels;
-									int res = insertAttribute( currentStruct, string($<str>1), dtype, levels);
-									if( res == -2 )
-									{
-										cout << "COMPILETIME ERROR: Attribute with the given name already exists" << endl;
-										return -1;
-									}
-									else if( res == -1 )
-									{
-										cout << "COMPILETIME ERROR: Attribute declaration prohibited" << endl;
-									}
-								}
-		| IDENTIFIER
-								{
-									vector<string> levels;
-									int res = insertAttribute( currentStruct, string($<str>1), dtype, levels);
-									if( res == -2 )
-									{
-										cout << "COMPILETIME ERROR: Attribute with the given name already exists" << endl;
-										return -1;
-									}
-									else if( res == -1 )
-									{
-										cout << "COMPILETIME ERROR: Attribute declaration prohibited" << endl;
-									}
-								}
+	dimensions:
+		'['']' dimensions	
+							{
+								dlevels++;
+							}
+		|
 		;
 
 	functionPrefix:
@@ -2193,9 +2446,13 @@ extern "C"
 													scopeStack.push(currentScope);
 												}
 		functionSuffix
-		| type_name IDENTIFIER '('
+		| type_name stars IDENTIFIER '('
 												{
-													string fname = string($<str>2);
+													for( int i = 0 ; i < starsCount ; i++ )
+													{
+														dtype = "*" + dtype;
+													}
+													string fname = string($<str>3);
 													int res = insertFunction(currentStruct, dtype, fname);
 													if( res == -2 )
 													{
@@ -2310,7 +2567,14 @@ int main( int argcount, char* arguements[] )
 	ofstream Myfile(file);
 
 	string functionFrame = getFunctionFrame();
-	TemporaryCode = functionFrame + "code starts\n" + TemporaryCode;
+	bool b = checkMain();
+	if( b == false )
+	{
+		cout << "Main function is not declared" << endl;
+		return 1;
+	}
+	functionFrame += "code starts\nfunCall main.main\ncall " + getFunctionLabel("main", "main") + "\nexit\n";
+	TemporaryCode = functionFrame + TemporaryCode;
 
 	printSymbolTable();
 	Myfile << TemporaryCode;

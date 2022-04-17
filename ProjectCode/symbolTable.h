@@ -1,4 +1,4 @@
-#include<string.h>
+#include<string.h> 
 #include<iostream>
 #include<unordered_map>
 #include<vector>
@@ -20,6 +20,9 @@ extern string currentStruct;
 extern string currentFunction;
 extern int currentScope;
 extern stack<int> scopeStack;
+extern int dlevels;
+extern int starsCount;
+extern bool newOrNot;
 
 char* getTemp( string type );
 char* getTemp();
@@ -35,6 +38,7 @@ class SymbolTableEntry
 		int size;			//size of the variable in bytes	
 		bool array;			//bool variable specifying if it is an array or not.
 		int scope;			//scope in which it is defined and to which it belongs to.
+		bool global;
 };
 
 class FunctionTable
@@ -62,14 +66,15 @@ class StructTable
 };
 
 extern vector<StructTable> globalTable;
+extern stack<SymbolTableEntry> callStack;
 
 int insertStruct( string structName );
 int insertAttribute( string structName, string variableName, string dataType, vector<string> levels);
 int insertFunction( string returnType, string functionName );
 int insertParam( string variableName, string dataType, vector<string>levels );
-int insertVariable( string variableName, string dataType, vector<string> levels );
+int insertVariable( string variableName, string dataType, vector<string> levels , bool global);
 
-int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels );
+int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels, bool global );
 int insertParam( string structName, string functionName, string variableName, string dataType, vector<string> levels );
 int insertFunction( string structName, string returnType, string functionName );
 
@@ -83,6 +88,8 @@ SymbolTableEntry getFunctionReturnAddress(string structName, string functionName
 string getFunctionFrame();
 int setLabel(string functionName, string label);
 string getFunctionLabel(string structName, string functionName );
+void setCallStack(string structName, string functionName);
+bool checkMain();
 
 
 
