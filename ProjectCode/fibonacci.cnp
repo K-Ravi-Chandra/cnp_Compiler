@@ -19,6 +19,7 @@ int fibonacci( int n )
 void main()
 {
 	int n;
+	n = scan();
 	int res = fibonacci(n);
 	print(res);
 }

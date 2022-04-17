@@ -84,7 +84,7 @@ int getSize( string dataType )
 	int size = 0;
 	if( dataType == "char" )
 	{
-		size = 1;
+		size = 4;
 	}
 	else if( dataType == "int" )
 	{
@@ -96,9 +96,13 @@ int getSize( string dataType )
 	}
 	else if( dataType == "bool" )
 	{
-		size = 1;
+		size = 4;
 	}
 	else if( dataType == "float" )
+	{
+		size = 4;
+	}
+	else if( dataType == "void" )
 	{
 		size = 4;
 	}

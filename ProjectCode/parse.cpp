@@ -77,77 +77,90 @@ void printMap(){
 
 			map <string, struct Var> vars = fn.vars; 
 			cout << "Variables : " << endl;
-			for(auto v = vars.begin(); v != vars.end(); ++v){
-				cout << "variable name : " << v->first  << endl;
-				var = v->second;
-				cout << "type : " << var.type << endl;
-				cout << "size : " << var.size<< endl;
-				cout << "name : " << var.name<< endl;
+
+			for( int i = 0 ; i < fn.variables.size() ; i++ )
+			{
+				cout << "var name = " << fn.variables[i] << endl;
+				var = vars[fn.variables[i]];
+				cout << "name\t\tsize\t\ttype\t\t" << endl;
+				cout << var.name << "\t\t" << var.size << "\t\t" << var.type << endl;
 			}
-
 			cout << endl;
-
 		}
 		cout << endl;
-
 	}
 }
 
-int getVarSize(string s){
+int getVarSize(string s)
+{
 	string parent_fn = "";
 	string child_fn = "";
 
 	string word = "";
-	for(auto x : s){
-		if(x == '.'){
+	for(auto x : s)
+	{
+		if(x == '.')
+		{
 			parent_fn = word;
 			word = "";
 		}
-		else{
+		else
+		{
 			word += x;
 		}
 	}
 	child_fn = word;
 	int size = 0;
-	if(m.find(parent_fn)!= m.end()){
+	if(m.find(parent_fn)!= m.end())
+	{
 		struct DS ds = m.find(parent_fn)->second;
 		map <string, struct function> funcs = ds.funcs;
-		if(funcs.find(child_fn)!= funcs.end()){
+		if(funcs.find(child_fn)!= funcs.end())
+		{
 			struct function fn = funcs.find(child_fn)->second;
 
 			map <string, struct Var> vars = fn.vars;
 
+			size += fn.returnValue.size;
+
 			struct Var var ;
-			for(auto v = vars.begin(); v != vars.end(); ++v){
+			for(auto v = vars.begin(); v != vars.end(); ++v)
+			{
 				var = v->second;
 				size += var.size;
 			}
 
 		}
-		else{
-			cout << "Couldn't find the given fn : " + child_fn + " in funcs map "<< endl;
+		else
+		{
+			cout << "Couldn't find the given fn : c" + child_fn + "c in funcs map "<< endl;
 			return -1;
 		}
 	}
-	else{
-		cout << "Couldn't find the given struct : " + parent_fn + " in map "<< endl;
+	else
+	{
+		cout << "Couldn't find the given struct : s" + parent_fn + "s in map "<< endl;
 		return -1;
 	}
 
 	return size;
 }
 
-int stackAddresses(string s, int pars){
+int stackAddresses(string s, int pars)
+{
 	string parent_fn = "";
 	string child_fn = "";
 
 	string word = "";
-	for(auto x : s){
-		if(x == '.'){
+	for(auto x : s)
+	{
+		if(x == '.')
+		{
 			parent_fn = word;
 			word = "";
 		}
-		else{
+		else
+		{
 			word += x;
 		}
 	}
@@ -155,10 +168,12 @@ int stackAddresses(string s, int pars){
 
 
 	int size = 0;
-	if(m.find(parent_fn)!= m.end()){
+	if(m.find(parent_fn)!= m.end())
+	{
 		struct DS ds = m.find(parent_fn)->second;
 		map <string, struct function> funcs = ds.funcs;
-		if(funcs.find(child_fn)!= funcs.end()){
+		if(funcs.find(child_fn)!= funcs.end())
+		{
 			struct function fn = funcs.find(child_fn)->second;
 
 			map <string, struct Var> params = fn.params;
@@ -166,54 +181,60 @@ int stackAddresses(string s, int pars){
 
 			int no_params = parameters.size();
 			struct Var var ;
-			if(pars > 0 && pars <= no_params){
+			if(pars > 0 && pars <= no_params)
+			{
 				var = fn.returnValue;
 				size += var.size;
 				pars--;
-				for(int i =0; pars>0 ; i++){
+				for(int i =0; pars>0 ; i++)
+				{
 					size += params.find(parameters[i])->second.size;
 					pars--;
 				}
 			}
-			else{
+			else
+			{
 				cout << "There are less parameters than given " << endl;
 				return -1;
 			}
-
 		}
-		else{
-			cout << "Couldn't find the given fn : " + child_fn + " in funcs map "<< endl;
+		else
+		{
+			cout << "Couldn't find the given fn : cc" + child_fn + "cc in funcs map "<< endl;
 			return -1;
 		}
 	}
-	else{
-		cout << "Couldn't find the given struct : " + parent_fn + " in map "<< endl;
+	else
+	{
+		cout << "Couldn't find the given struct : ss" + parent_fn + "ss in map "<< endl;
 		return -1;
 	}
-
 	return size;
-
-
 }
 
-int stackAdressesName(string s, string par){
+int stackAdressesName(string s, string par)
+{
 	string parent_fn = "";
 	string child_fn = "";
 
 	string word = "";
-	for(auto x : s){
-		if(x == '.'){
+	for(auto x : s)
+	{
+		if(x == '.')
+		{
 			parent_fn = word;
 			word = "";
 		}
-		else{
+		else
+		{
 			word += x;
 		}
 	}
 	child_fn = word;
 
 	int size = 0;
-	if(m.find(parent_fn)!= m.end()){
+	if(m.find(parent_fn)!= m.end())
+	{
 		struct DS ds = m.find(parent_fn)->second;
 		map <string, struct function> funcs = ds.funcs;
 		if(funcs.find(child_fn)!= funcs.end()){
@@ -223,7 +244,8 @@ int stackAdressesName(string s, string par){
 			vector <string> parameters = fn.parameters;
 
 			int index= 0;
-			for(index= 0 ; index < parameters.size(); index++){
+			for(index= 0 ; index < parameters.size(); index++)
+			{
 				if(parameters[index] == par)
 					break;
 			}
@@ -232,38 +254,42 @@ int stackAdressesName(string s, string par){
 			{
 				size = stackAddresses(s,index+1);
 			}
-			else {
+			else 
+			{
 				cout << "Could'nt find the parameter" << endl;
 				return -1;
 			}
-
 		}
-		else{
+		else
+		{
 			cout << "Couldn't find the given fn : " + child_fn + " in funcs map "<< endl;
 			return -1;
 		}
 	}
-	else{
+	else
+	{
 		cout << "Couldn't find the given struct : " + parent_fn + " in map "<< endl;
 		return -1;
 	}
-
 	return size;
-
 }
 
 
-int stackAddressesVars(string s, int var_index){
+int stackAddressesVars(string s, int var_index)
+{
 	string parent_fn = "";
 	string child_fn = "";
 
 	string word = "";
-	for(auto x : s){
-		if(x == '.'){
+	for(auto x : s)
+	{
+		if(x == '.')
+		{
 			parent_fn = word;
 			word = "";
 		}
-		else{
+		else
+		{
 			word += x;
 		}
 	}
@@ -271,10 +297,12 @@ int stackAddressesVars(string s, int var_index){
 
 
 	int size = 0;
-	if(m.find(parent_fn)!= m.end()){
+	if(m.find(parent_fn)!= m.end())
+	{
 		struct DS ds = m.find(parent_fn)->second;
 		map <string, struct function> funcs = ds.funcs;
-		if(funcs.find(child_fn)!= funcs.end()){
+		if(funcs.find(child_fn)!= funcs.end())
+		{
 			struct function fn = funcs.find(child_fn)->second;
 
 			map <string, struct Var> vars = fn.vars;
@@ -282,90 +310,106 @@ int stackAddressesVars(string s, int var_index){
 
 			int no_vars = variables.size();
 			struct Var var ;
-			if(var_index > 0 && var_index <= no_vars){
+			if(var_index >= 0 && var_index < no_vars)
+			{
+				/*
 				var = fn.returnValue;
 				size += var.size;
 				var_index--;
-				for(int i =0; var_index>0 ; i++){
+				for(int i =0; var_index>0 ; i++)
+				{
 					size += vars.find(variables[i])->second.size;
 					var_index--;
 				}
+				*/
+				size = 4;
+				for( int i = variables.size()-1 ; i > var_index ; i-- )
+				{
+					size += vars.find(variables[i])->second.size;
+				}
 			}
-			else{
+			else
+			{
 				cout << "There are less Variables than given " << endl;
 				return -1;
 			}
-
 		}
-		else{
+		else
+		{
 			cout << "Couldn't find the given fn : " + child_fn + " in funcs map "<< endl;
 			return -1;
 		}
 	}
-	else{
+	else
+	{
 		cout << "Couldn't find the given struct : " + parent_fn + " in map "<< endl;
 		return -1;
 	}
-
 	return size;
-
-
 }
 
-int stackAdressesVarsName(string s, string var_name){
+int stackAdressesVarsName(string s, string var_name)
+{
 	string parent_fn = "";
 	string child_fn = "";
 
 	string word = "";
-	for(auto x : s){
-		if(x == '.'){
+	for(auto x : s)
+	{
+		if(x == '.')
+		{
 			parent_fn = word;
 			word = "";
 		}
-		else{
+		else
+		{
 			word += x;
 		}
 	}
 	child_fn = word;
 
 	int size = 0;
-	if(m.find(parent_fn)!= m.end()){
+	if(m.find(parent_fn)!= m.end())
+	{
 		struct DS ds = m.find(parent_fn)->second;
 		map <string, struct function> funcs = ds.funcs;
-		if(funcs.find(child_fn)!= funcs.end()){
+		if(funcs.find(child_fn)!= funcs.end())
+		{
 			struct function fn = funcs.find(child_fn)->second;
 
 			map <string, struct Var> vars = fn.vars;
 			vector <string> variables = fn.variables;
 
 			int index= 0;
-			for(index= 0 ; index < variables.size(); index++){
+			for(index= 0 ; index < variables.size(); index++)
+			{
 				if(variables[index] == var_name)
 					break;
 			}
 
 			if (index != variables.size())
 			{
-				size = stackAddressesVars(s,index+1);
+				size = stackAddressesVars(s,index);
 			}
-			else {
+			else 
+			{
 				cout << "Could'nt find the Variable" << endl;
 				return -1;
 			}
 
 		}
-		else{
-			cout << "Couldn't find the given fn : " + child_fn + " in funcs map "<< endl;
+		else
+		{
+			cout << "Couldn't find the given fn : $" + child_fn + "$ in funcs map "<< endl;
 			return -1;
 		}
 	}
-	else{
-		cout << "Couldn't find the given struct : " + parent_fn + " in map "<< endl;
+	else
+	{
+		cout << "Couldn't find the given struct : $" + parent_fn + "$ in map "<< endl;
 		return -1;
 	}
-
 	return size;
-
 }
 
 string currentFunc;
@@ -668,8 +712,13 @@ int main(int argcount, char* arguments[])
 		int d1 = 0;
 		string s;
 		vector<string> var;
+		int paramCount = 0;
 		while(getline(file, s))
 		{ 
+			if( s == "" )
+			{
+				continue;
+			}
 			char s1[s.size()+1];
 			strcpy(s1, s.c_str());
 			char* token = strtok(s1, " ");
@@ -686,14 +735,16 @@ int main(int argcount, char* arguments[])
 				continue;
 			}
 			if(d1 == 0) continue;
+
 			cout << s << endl;
-			
+
 			mc += "\n#" + s + "\n";
 			if(tokens[0] == "funCall")
 			{
 				funCall = tokens[1];
+				paramCount = 1;
 			}
-			else if( tokens[0] == "function" )
+			else if( tokens[0] == "function" and tokens[1] == "start" )
 			{
 				currentFunc = tokens[2];
 			}
@@ -701,8 +752,41 @@ int main(int argcount, char* arguments[])
 			{
 				int size = getVarSize(funCall);
 				size += 4;
-				mc += "addiu $sp, $sp, " + to_string(size) + "\n";
+				mc += "addiu $sp, $sp, -" + to_string(size) + "\n";
 				mc += "jal " + tokens[1] + "\n";
+			}
+			else if( tokens[0] == "setReturn" )
+			{
+				mc += "sw $ra, 0($sp)\n";
+			}
+			else if( tokens[0] == "param" )
+			{
+				int a = stackAddresses( funCall, paramCount );
+				a += 4;
+				paramCount++;
+				string addr = getStackAddr(tokens[1]);
+				mc += "lw $8, " + addr + "\n";
+				mc += "sw $8, -" + to_string(a) + "($sp)\n";
+			}
+			else if( tokens.size() == 3 and tokens[2] == "returnVal" )
+			{
+				mc += "lw $8, -4($sp)\n";
+				string addr = getStackAddr(tokens[0]);
+				mc += "sw $8, " + addr + "\n";
+			}
+			else if( tokens[0] == "return" )
+			{
+				mc += "lw $ra, 0($sp)\n";
+				if( tokens.size() != 1 )
+				{
+					string addr = getStackAddr(tokens[1]);
+					int size = getVarSize(currentFunc);
+					size += 4;
+					mc += "lw $8, " + addr + "\n";
+					mc += "addiu $sp, $sp, " + to_string(size) + "\n";
+					mc += "sw $8, -4($sp)\n";
+				}
+				mc += "jr $ra\n";
 			}
 			else if(tokens[0].substr(tokens[0].size()-1, tokens[0].size()) == ":")
 			{
@@ -955,14 +1039,14 @@ int main(int argcount, char* arguments[])
 				   }
 				   mc += "bc1t "+goto_label+"\n";
 				   } 
-				   */
+				 */
 			}
 			else if(tokens[0] == "print")
 			{
 				string type = tokens[1];
 				if( type == "newline" )
 				{
-					mc += "lb $4, 10\n";
+					mc += "li $4, 10\n";
 					mc += "li $2, 11\n";
 					mc += "syscall\n";
 					continue;
@@ -1605,7 +1689,6 @@ int main(int argcount, char* arguments[])
 		}
 
 	}
-	mc += "li $v0, 10\nsyscall\n";
 	mc = def + mc;
 	//cout<<mc;
 	file.close();
@@ -1613,7 +1696,7 @@ int main(int argcount, char* arguments[])
 	ofstream myfile("machine.asm");
 	myfile << mc;
 	myfile.close();
-	
+
 
 	return 0;
 }

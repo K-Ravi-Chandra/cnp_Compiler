@@ -2495,6 +2495,8 @@ extern "C"
 													string label = getLabel();
 													appendCode(label + ":");
 													setLabel(currentFunction, label);
+													appendCode("function start " + currentStruct + "." + currentFunction);
+													appendCode("setReturn");
 													if( parseDebug == 1 )
 													{
 														cout << "function -> void main" << endl;
@@ -2555,6 +2557,7 @@ extern "C"
 													string label = getLabel();
 													appendCode(label + ":");
 													setLabel(currentFunction, label);
+													appendCode("function start " + currentStruct + "." + currentFunction);
 													appendCode("setReturn");
 												}
 		statement_block							
@@ -2568,6 +2571,7 @@ extern "C"
 													string label = getLabel();
 													appendCode(label + ":");
 													setLabel(currentFunction, label);
+													appendCode("function start " + currentStruct + "." + currentFunction);
 													appendCode("setReturn");
 												}
 		statement_block							
