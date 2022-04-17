@@ -10,6 +10,7 @@ int main( int argcount, char* arguments[] )
 	string def = ".data\n";
 
 	int looplabel = 1;
+	bool startCode = false;
 	fstream file; 
 	file.open(string(arguments[1]),ios::in); 
 	if (file.is_open())
@@ -19,8 +20,16 @@ int main( int argcount, char* arguments[] )
 		vector<string> var;
 		while(getline(file, s))
 		{ 
+<<<<<<< HEAD
+			cout << s << endl;
+			if( s == "" )
+			{
+				continue;
+			}
+=======
 			mc += "\n #" + s + "\n";
 			//cout << s << endl;
+>>>>>>> ee48f920d061a813d2307803d3b86a893f5b8378
 			char s1[s.size()+1];
 			strcpy(s1, s.c_str());
 			char* token = strtok(s1, " ");
@@ -31,12 +40,25 @@ int main( int argcount, char* arguments[] )
 				tokens.push_back(token);
 				token = strtok(NULL, " ");
 			}
+<<<<<<< HEAD
+
+			if( tokens[0] == "code" and tokens[1] == "starts" )
+			{
+				startCode = true;
+			}
+			if( startCode == false )
+			{
+				continue;
+			}
+
+=======
 			if(tokens[0] == "code" && tokens[1] == "starts")
 			{
 				d1 = 1;
 				continue;
 			}
 			if(d1 == 0) continue;
+>>>>>>> ee48f920d061a813d2307803d3b86a893f5b8378
 			if(tokens[0].substr(tokens[0].size()-1, tokens[0].size()) == ":")
 			{
 				string lname = tokens[0]; 
@@ -284,6 +306,13 @@ int main( int argcount, char* arguments[] )
 			else if(tokens[0] == "print")
 			{
 				string type = tokens[1];
+				if( type == "newline" )
+				{
+					mc += "li $2, 11\n"; 
+					mc += "lb $4, 10\n";
+					mc += "syscall\n";
+					continue;
+				}
 				string var1 = tokens[2];
 
 				if(type == "int")
@@ -418,6 +447,14 @@ int main( int argcount, char* arguments[] )
 			else if( tokens[0] == "exit" )
 			{
 				mc += "li $v0, 10\nsyscall\n";
+			}
+			else if( tokens[0] == "call" )
+			{
+				mc += "jal " + tokens[1] + "\n";
+			}
+			else if( tokens[1] == "return" )
+			{
+				mc += "jr $ra\n";
 			}
 			else if( tokens.size() >= 3 )
 			{

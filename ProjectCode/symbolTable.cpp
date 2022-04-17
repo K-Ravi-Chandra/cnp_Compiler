@@ -18,6 +18,7 @@ int dlevels;
 stack<string> ifgoto;
 string forExprVal;
 int tempint = 1;
+int strConstInt = 1;
 stack<string> forIncrement;
 stack<string> forNext;
 int labelint = 1;
@@ -55,6 +56,13 @@ char* getTemp()
 	strcpy(t, temp.c_str());
 	tempint++;
 	return t;
+}
+
+string getStringConst()
+{
+	string temp = "_s" + to_string(strConstInt);
+	strConstInt++;
+	return temp;
 }
 
 //returns a new label address, similar to the generating temp variables.
@@ -281,6 +289,11 @@ int insertFunction( string structName, string returnType, string functionName )
 			}
 			FunctionTable* func = new FunctionTable(functionName, returnType );
 			globalTable[i].functions.push_back(*func);
+			if( structName != "main" )
+			{
+				vector<string> levels;
+				insertParam( structName, functionName, "this", structName, levels);
+			}
 			return 1;
 		}
 	}
@@ -464,14 +477,48 @@ SymbolTableEntry  getVariable( string structName, string functionName, string va
 						{
 							if( b )
 							{
-								ste = tab[k];
+								stack<int> sk;
+								while( !scopeStack.empty() )
+								{
+									int n = scopeStack.top();
+									if( tab[k].scope == n )
+									{
+										ste = tab[k];
+									}
+									scopeStack.pop();
+									sk.push(n);
+								}
+
+								while( !sk.empty() )
+								{
+									int n = sk.top();
+									sk.pop();
+									scopeStack.push(n);
+								}
 								b = false;
 							}
 							else
 							{
 								if( tab[k].scope > ste.scope )
 								{
-									ste = tab[k];
+									stack<int> sk;
+									while( !scopeStack.empty() )
+									{
+										int n = scopeStack.top();
+										if( tab[k].scope == n )
+										{
+											ste = tab[k];
+										}
+										scopeStack.pop();
+										sk.push(n);
+									}
+
+									while( !sk.empty() )
+									{
+										int n = sk.top();
+										sk.pop();
+										scopeStack.push(n);
+									}
 								}
 							}
 						}

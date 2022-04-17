@@ -72,26 +72,50 @@ extern "C"
 												{
 													cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
 													cout << "At line : " << yylineno << endl;
-													printSymbolTable();
-													cout << TemporaryCode << endl;
 													return -1;
 												}
+												else if( ste.name.substr(0, 4) == "this" )
+												{
+													string thisName = "this_" + to_string(ste.scope);
+													string varName = ste.name.substr(5, ste.name.length());
 
-												//get the datatype from ste, and initialize the type attribute.
-												char* t = (char*) calloc(ste.dataType.length(), sizeof(char));
-												strcpy(t, ste.dataType.c_str());
-												$<var.type>$ = t;
+													
+													string temp1(getTemp("int"));
+													appendCode("la " + temp1 + " " + thisName);
 
-												//since there can be many variables with same name, we differentiate them by their
-												//scope to which they belong to, by appending the scope to their name.
-												string temp = ste.name + "_" + to_string(ste.scope);
-												t = (char*) calloc(temp.length()-1, sizeof(char));
-												strcpy(t, temp.c_str());
-												$<var.addr>$ = t;
+													string temp2(getTemp("int"));
+													appendCode(temp2 + " =i " + "address( " + currentStruct + " , " + varName + " )");
+	
+													string temp3(getTemp("int"));
+													appendCode(temp3 + " =i " + temp1 + " +i " + temp2);
+	
+													char* t = (char*) calloc(ste.dataType.length()-1, sizeof(char));
+													strcpy(t, ste.dataType.c_str());
+													$<var.type>$ = t;
+													
+													temp3 = "*" + temp3;
+													t = (char*) calloc(temp3.length()-1, sizeof(char));
+													strcpy(t, temp3.c_str());
+
+													$<var.addr>$ = t;
+												}
+												else
+												{
+													char* t = (char*) calloc(ste.dataType.length(), sizeof(char));
+													strcpy(t, ste.dataType.c_str());
+													$<var.type>$ = t;
+	
+													string temp = ste.name + "_" + to_string(ste.scope);
+													t = (char*) calloc(temp.length()-1, sizeof(char));
+													strcpy(t, temp.c_str());
+													$<var.addr>$ = t;
+												}
 
 												if( parseDebug == 1 )
 												{
 													cout << "primary_expression -> IDENTIFIER" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}	
 			| constant						{
@@ -100,7 +124,9 @@ extern "C"
 
 												if( parseDebug == 1 )
 												{
-													cout << "primary_expression -> constant" << endl;
+													cout << "primary_expression -> constant" << endl
+													;cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| '(' expression ')'			{
@@ -110,20 +136,24 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "primary_expression -> ( expression )" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| NULL_							{
-												string type = "NULL";
+												string type = "int";
 												char* t = (char*) calloc(type.length(), sizeof(char));
 												strcpy(t, type.c_str());
 												$<var.type>$ = t;
 
-												$<var.addr>$ = getTemp();
+												$<var.addr>$ = getTemp("int");
 												appendCode(string($<var.addr>$) + " =i #0");
 
 												if( parseDebug == 1 )
 												{
-													cout << "primary_expression -> IDENTIFIER" << endl;
+													cout << "primary_expression -> NULL_" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			; 
@@ -144,6 +174,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "constant -> I_const" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| F_CONST						{
@@ -160,6 +192,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "constant -> F_const" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| C_CONST						{
@@ -176,6 +210,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "constant -> C_const" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| S_CONST						{
@@ -185,18 +221,16 @@ extern "C"
 												strcpy(t, temp.c_str());
 												$<var.type>$ = t;
 									
-												$<var.addr>$ = getTemp();
 
-												string tem($<var.addr>$);
-
-												appendCode(string($<var.addr>$) + " =s #" + string($<str>1));
+												string strConst = getStringConst();
 
 												$<var.addr>$ = getTemp("int");
-												appendCode("la " + string($<var.addr>$) + " " + tem);
-
+												appendCode( "strconst " + strConst +  " " + string($<var.addr>$) + " #" + string($<str>1));
 												if( parseDebug == 1 )
 												{
 													cout << "constant -> S_const" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| B_CONST						{
@@ -208,11 +242,21 @@ extern "C"
 									
 												$<var.addr>$ = getTemp("bool");
 
-												appendCode(string($<var.addr>$) + " =b #" + string($<str>1));
+
+												if( string($<str>1) == "true" )
+												{
+													appendCode(string($<var.addr>$) + " =b #1");
+												}
+												else
+												{
+													appendCode(string($<var.addr>$) + " =b #0");
+												}
 
 												if( parseDebug == 1 )
 												{
 													cout << "constant -> B_const" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			;
@@ -255,13 +299,15 @@ extern "C"
 														$<array.addr>$ = $<var.addr>1;
 														$<array.type>$ = $<var.type>1;
 														$<array.completed>$ = 2;
-														$<array.index>$ = NULL;
+														$<array.level>$ = 0;
+														$<array.index>$ = $<array.addr>$;
 													}
 													else
 													{
 														$<array.addr>$ = $<var.addr>1;
 														$<array.type>$ = $<var.type>1;
 														$<array.index>$ = NULL;
+														$<array.level>$ = 0;
 														$<array.completed>$ = 1;
 													}
 												}
@@ -277,13 +323,6 @@ extern "C"
 												{
 													cout << "COMPILETIME ERROR: Cannot index a non-array type" << endl;
 													cout << "At line : " << yylineno << endl;
-													cout << "Temp code " << TemporaryCode << endl;
-													cout << "symbolTable" << endl;
-													printSymbolTable();
-													cout << "arrar.completed = " << $<array.completed>1 << endl;
-													cout << "array.addr = " << string($<array.addr>1) << endl;
-													cout << "array.type = " << string($<array.type>1) << endl;
-													cout << "array.levels = " << $<array.level>1 << endl;
 													return -1;
 												}
 												if( string($<var.type>3) != "int" )
@@ -314,30 +353,32 @@ extern "C"
 												SymbolTableEntry ste = getVariable(origname);
 												if( $<array.completed>1 == 2 )
 												{
-													appendCode("sting code");
 													string temp(getTemp("int"));
 													appendCode(temp + " =i len " + string($<array.addr>$));
 
-													/*
 													string label1 = getLabel();
 													string label2 = getLabel();
 													
 													appendCode("if ( " + string($<var.addr>3) + " <i " + temp + " ) goto " +  label1);
-													string var(getTemp());
-													appendCode(var + " =s #" + "\"RUNTIME ERROR: Index out of Bounds\"");
+													string strconst = getStringConst();
+													string var(getTemp("int"));
+													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index out of Bounds\"");
 													appendCode("print string " + var);
 													appendCode("exit");
 													appendCode(label1 + ":");
 													appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
-													var = string(getTemp());
-													appendCode(var + " =s #" + "\"RUNTIME ERROR: Index is negative\"");
+													
+													strconst = getStringConst();
+													var = (getTemp("int"));
+													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index is negative\"");
 													appendCode("print string " + var);
+													
 													appendCode("exit");
 													appendCode(label2 + ":");
-													*/
 													
-													temp = string($<var.addr>3);
-													appendCode(temp + " =i " + string($<array.addr>1) + " +i " + temp);
+													temp = string(getTemp("int"));
+
+													appendCode(temp + " =i " + string($<array.addr>1) + " +i " + string($<var.addr>3));
 
 													temp = "*" + temp;
 													char* s = (char*) calloc(temp.size()+1, sizeof(char));
@@ -351,24 +392,25 @@ extern "C"
 												}
 												else if( $<array.level>1 ==  ste.levels.size()-1 )
 												{
-													if( $<array.completed>1 != 2 and false)
-													{
 														string label1 = getLabel();
 														string label2 = getLabel();
 
 														appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + " ) goto " +  label1);
-														string var(getTemp());
-														appendCode(var + " =s #" + "\"RUNTIME ERROR: Index out of Bounds\"");
-														appendCode("print string " + var);
-														appendCode("exit");
-														appendCode(label1 + ":");
-														appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
-														var = string(getTemp());
-														appendCode(var + " =s #" + "\"RUNTIME ERROR: Index is negative\"");
-														appendCode("print string " + var);
-														appendCode("exit");
-														appendCode(label2 + ":");
-													}
+														string strconst = getStringConst();
+													string var(getTemp("int"));
+													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index out of Bounds\"");
+													appendCode("print string " + var);
+													appendCode("exit");
+													appendCode(label1 + ":");
+													appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
+													
+													strconst = getStringConst();
+													var = (getTemp("int"));
+													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index is negative\"");
+													appendCode("print string " + var);
+													
+													appendCode("exit");
+													appendCode(label2 + ":");
 
 													string temp(getTemp("int"));
 
@@ -389,23 +431,24 @@ extern "C"
 												}
 												else
 												{
-													if( $<array.completed>1 != 2 and false)
-													{
 														string label1 = getLabel();
 														string label2 = getLabel();
 														appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + " ) goto " +  label1);
-														string var(getTemp());
-														appendCode(var + " =s #" + "\"RUNTIME ERROR: Index out of Bounds\"");
-														appendCode("print string " + var);
-														appendCode("exit");
-														appendCode(label1 + ":");
-														appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
-														var = string(getTemp());
-														appendCode(var + " =s #" + "\"RUNTIME ERROR: Index is negative\"");
-														appendCode("print string " + var);
-														appendCode("exit");
-														appendCode(label2 + ":");
-													}
+														string strconst = getStringConst();
+													string var(getTemp("int"));
+													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index out of Bounds\"");
+													appendCode("print string " + var);
+													appendCode("exit");
+													appendCode(label1 + ":");
+													appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
+													
+													strconst = getStringConst();
+													var = (getTemp("int"));
+													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index is negative\"");
+													appendCode("print string " + var);
+													
+													appendCode("exit");
+													appendCode(label2 + ":");
 
 													$<array.index>$ = getTemp("int");
 													string temp($<array.index>$);
@@ -430,7 +473,6 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "postfix_expression -> postfix_expression [ expression ]" << endl;
-													cout << TemporaryCode << endl;
 												}
 											}
 			| postfix_expression INC_OP		{
@@ -492,22 +534,32 @@ extern "C"
 												if( ste.name == "" )
 												{
 													cout << "COMPILETIME ERROR: type " << string($<array.type>1) << " doesn't have an attribute " << string($<str>3) << endl;
+													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
+
+
+												string temp1(getTemp("int"));
+												appendCode("la " + temp1 + " " + string($<array.addr>1));
+
+												string temp2(getTemp("int"));
+												appendCode(temp2 + " =i " + "address( " + string($<array.type>1) + " , " + string($<array.addr>1) + " )");
+
+												string temp3(getTemp("int"));
+												appendCode(temp3 + " =i " + temp1 + " +i " + temp2);
+
+
 
 												char* t = (char*) calloc(ste.dataType.length()-1, sizeof(char));
 												strcpy(t, ste.dataType.c_str());
 												$<array.type>$ = t;
 												
-												string addr = string($<array.addr>1) + "." + string($<str>3);
-												t = (char*) calloc(addr.length()-1, sizeof(char));
-												strcpy(t, addr.c_str());
+												temp3 = "*" + temp3;
+												t = (char*) calloc(temp3.length()-1, sizeof(char));
+												strcpy(t, temp3.c_str());
 
 												$<array.addr>$ = t;
 												$<array.completed>$ = 1;
-
-												cout << "array.type  = " << string($<array.type>$) << endl;
-												cout << "array.addr = " << string($<array.addr>$) << endl;
 											}
 			| postfix_expression '.' IDENTIFIER '('
 								{
@@ -522,17 +574,15 @@ extern "C"
 									appendCode("funCall " + string($<array.type>1) + "." + string($<str>3));
 									setCallStack(string($<array.type>1), string($<str>3));
 									appendCode("param " + string($<array.addr>1));
-									if( parseDebug == 1 )
-									{
-										cout << "postifx_expression -> postifix . identifier '('" << endl;
-									}
+									callStack.pop();
 								}
 			functionCall		{
 									SymbolTableEntry ste = getFunctionReturnAddress(string($<array.type>1), string($<str>3));
 
 									if( !callStack.empty() )
 									{
-										cout << "COMPILETIME ERROR: Too few arguments" << endl;
+										cout << "COMPILETIME ERROR: Too few arguments for the function " << string($<array.type>1) << "." << string($<str>3) << endl;
+										cout << "At line : " << yylineno << endl;
 										return -1;
 									}
 									
@@ -543,13 +593,9 @@ extern "C"
 									strcpy(t, ste.dataType.c_str());
 									$<array.type>$ = t;
 
-									string var(getTemp(ste.dataType));
+									$<array.addr>$ = getTemp(ste.dataType);
 
-									appendCode(var + " = returnVal");
-
-									t = (char*) calloc(var.length()-1, sizeof(char));
-									strcpy(t, var.c_str());
-									$<array.addr>$ = t;
+									appendCode(string($<array.addr>$) + " = returnVal");
 
 									if( parseDebug == 1 )
 									{
@@ -568,10 +614,6 @@ extern "C"
 									}
 									appendCode("funCall main." + string($<str>1));
 									setCallStack("main", string($<str>1));
-									if( parseDebug == 1 )
-									{
-										cout << "postfix -> identifier '('" << endl;
-									}
 								}
 			functionCall
 								{
@@ -579,29 +621,22 @@ extern "C"
 
 									if( !callStack.empty() )
 									{
-										cout << "COMPILETIME ERROR: Too few arguments" << endl;
+										cout << "COMPILETIME ERROR: Too few arguments for the function " << string($<str>1) << endl;
+										cout << "At line : " << yylineno << endl;
 										return -1;
 									}
 									
 									appendCode("call " + getFunctionLabel("main", string($<str>1)));
 									
 									$<array.completed>$ = 1;
+									
 									char* t = (char*) calloc(ste.dataType.length()-1, sizeof(char));
 									strcpy(t, ste.dataType.c_str());
 									$<array.type>$ = t;
 
-									string var(getTemp(ste.dataType));
+									$<array.addr>$ =  getTemp(ste.dataType);
+									appendCode(string($<array.addr>$) + " = returnVal");
 
-									appendCode(var + " = returnVal");
-
-									t = (char*) calloc(var.length()-1, sizeof(char));
-									strcpy(t, var.c_str());
-									$<array.addr>$ = t;
-
-									if( parseDebug == 1 )
-									{
-										cout << "functionCall -> ')'" << endl;
-									}
 									if( parseDebug == 1 )
 									{
 										cout << "postfix expr -> identifier '(' functionCall " << endl;
@@ -622,58 +657,60 @@ extern "C"
 									if( parseDebug == 1 )
 									{
 										cout << "functionCall -> argument_list ')'" << endl;
-										printSymbolTable();
-										cout << "Temp code = " << TemporaryCode << endl;
 									}
 								}
 
 	argument_list
 		:	expression
 								{
+									if( callStack.empty() )
+									{
+										cout << "COMPILETIME ERROR: Too many arguments" << endl;
+										cout << "At line : " << yylineno << endl;
+										return -1;
+									}
+									else if( string($<var.type>1) != callStack.top().dataType )
+									{
+										cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
+										cout << "Given parameter is of type " << string($<var.type>1) << ", required parameter is of type " << callStack.top().dataType << endl;
+										cout << "At line : " << yylineno << endl;
+										return -1;
+									}
+									appendCode("param " + string($<var.addr>1));
+									callStack.pop();
 									if( parseDebug == 1 )
 									{
 										cout << "argumentlist -> expression" << endl;
 									}
+								}
+			| argument_list ',' expression
+								{
 									appendCode("param " + string($<var.addr>1));
 									if( callStack.empty() )
 									{
 										cout << "COMPILETIME ERROR: Too many arguments" << endl;
+										cout << "At line : " << yylineno << endl;
 										return -1;
 									}
 									else if( string($<var.type>1) != callStack.top().dataType )
 									{
 										cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
 										cout << "Given parameter is of type " << string($<var.type>1) << ", required parameter is of type " << callStack.top().dataType << endl;
+										cout << "At line : " << yylineno << endl;
 										return -1;
 									}
 									callStack.pop();
-								}
-			| argument_list ',' expression
-								{
 									if( parseDebug == 1 )
 									{
 										cout << "argumentlist -> argumentlist ',' expression" << endl;
 									}
-									appendCode("param " + string($<var.addr>1));
-									if( callStack.empty() )
-									{
-										cout << "COMPILETIME ERROR: Too many arguments" << endl;
-										return -1;
-									}
-									else if( string($<var.type>1) != callStack.top().dataType )
-									{
-										cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
-										cout << "Given parameter is of type " << string($<var.type>1) << ", required parameter is of type " << callStack.top().dataType << endl;
-										return -1;
-									}
-									callStack.pop();
 								}
 			;
 	
 	unary_expression
 		:	postfix_expression				{	
 												//if the expression is complete then do the usual
-												if( $<array.completed>$ >= 1 or strcmp($<array.type>1, "string") == 0)
+												if( $<array.completed>$ >= 1 )
 												{
 													$<var.addr>$ = $<array.addr>1;
 													if( $<array.completed>$ == 2 )
@@ -698,6 +735,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "unary_expr	-> postfix" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| INC_OP unary_expression		{
@@ -718,6 +757,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "unary_expr	-> INC_OP unary_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| DEC_OP unary_expression		{
@@ -735,11 +776,12 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "unary_expr	-> DEC_OP unary_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| unary_operator unary_expression
 											{
-												$<var.type>$ = $<var.type>2;
 												string op($<str>1);
 												string type($<var.type>2); 
 												$<var.type>$ = $<var.type>2;
@@ -788,27 +830,38 @@ extern "C"
 													else
 													{
 														string temp = type.substr(1, type.size());
-														$<var.addr>$ = getTemp(temp);
 														
 														char* i = (char*) calloc(temp.length()-1, sizeof(char));
 														strcpy(i, temp.c_str());
 														$<var.type>$ = i;
-														appendCode(string($<var.addr>$) + " = *" + string($<var.addr>2)); 
+
+														string addr(getTemp(temp));
+														appendCode( addr + " =i " + string($<var.addr>2) );
+
+														addr = "*" + addr;
+
+														i = (char*) calloc(addr.length(), sizeof(char));
+														strcpy(i, addr.c_str());
+														$<var.addr>$ = i;
 													}
 												}
 												if( op == "&" ) 
 												{
-														string temp = "*" + type;
-														$<var.addr>$ = getTemp(temp);
+														$<var.addr>$ = getTemp("int");
+														
+														string temp = "int";
 														
 														char* i = (char*) calloc(temp.length()-1, sizeof(char));
 														strcpy(i, temp.c_str());
 														$<var.type>$ = i;
-														appendCode(string($<var.addr>$) + " = &" + string($<var.addr>2)); 
+
+														appendCode("la " + string($<var.addr>2) + " " + string($<var.addr>$));
 												}
 												if( parseDebug == 1 )
 												{
 													cout << "unary_expr	-> unary_op unary_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| LEN '(' IDENTIFIER ')'		
@@ -822,18 +875,18 @@ extern "C"
 												}
 
 												string type = "int";
-												char* t = (char*) calloc(3, sizeof(char));
+												char* t = (char*) calloc(type.length(), sizeof(char));
 												strcpy(t, type.c_str());
 												$<var.type>$ = t;
 
-												string temp = ste.levels[0];
-
 												$<var.addr>$ = getTemp("int");
 
-												appendCode(string($<var.addr>$) + " =i " + temp);
+												appendCode(string($<var.addr>$) + " =i len " + string($<str>3));
 												if( parseDebug == 1 )
 												{	
 													cout << "unary_expr -> len '(' identifier ')'" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			;
@@ -844,7 +897,7 @@ extern "C"
 			| CHAR						{   dtype = "char";starsCount = 0; newOrNot = false; }
 			| STRING					{ 	dtype = "string";starsCount = 0; newOrNot = false;}
 			| BOOL						{ 	dtype = "bool";starsCount = 0; newOrNot = false; }
-			| VAR IDENTIFIER			{ 	dtype = string($<str>2);starsCount = 0; newOrNot = false;}
+			| VAR IDENTIFIER			{ 	dtype = string($<str>2); starsCount = 0; newOrNot = false;}
 			;
 
 	unary_operator
@@ -893,6 +946,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "multi	-> unary_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| multiplicative_expression '*' unary_expression
@@ -946,6 +1001,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "multi -> multi * unary_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| multiplicative_expression '/' unary_expression
@@ -993,6 +1050,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "multi -> multi / unary_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| multiplicative_expression '%' unary_expression
@@ -1011,11 +1070,13 @@ extern "C"
 												{
 														$<var.addr>$ = getTemp("int");
 														$<var.type>$ = $<var.type>1;
-														appendCode(string($<var.addr>$) + " =i " + string($<var.addr>1) + " %%i " +  string($<var.addr>3));
+														appendCode(string($<var.addr>$) + " =i " + string($<var.addr>1) + " %i " +  string($<var.addr>3));
 												}
 												if( parseDebug == 1 )
 												{
 													cout << "multi	-> multi %% unary_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			;
@@ -1026,6 +1087,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "additive -> multi" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| additive_expression '+' multiplicative_expression
@@ -1090,14 +1153,14 @@ extern "C"
 												else
 												{
 													cout << "COMPILETIME ERROR: Invalid Operands for +" << endl;
-													cout << "type1 = " << type1 << " addr1 = " << $<var.addr>1 << endl;
-													cout << "type2 = " << type2 << " addr2 = " << $<var.addr>3 << endl;
 													cout << "At line : " << yylineno << endl;
 													return -1;
 												}
 												if( parseDebug == 1 )
 												{
 													cout << "additive -> additive + multi" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| additive_expression '-' multiplicative_expression
@@ -1144,6 +1207,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "additive -> additive - multi" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			;
@@ -1155,6 +1220,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "rel_expr	-> additive" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| relational_expression '<' additive_expression
@@ -1199,6 +1266,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "rel_expr -> rel_expr < additive" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| relational_expression '>' additive_expression
@@ -1239,6 +1308,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "rel_expr -> rel_expr > additive" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| relational_expression LE_OP additive_expression
@@ -1279,6 +1350,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "rel_expr -> rel_expr <= additive" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| relational_expression GE_OP additive_expression
@@ -1319,6 +1392,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "rel_expr -> rel_expr >= additive" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			;
@@ -1330,6 +1405,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "eq_expr -> rel_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| equality_expression EQ_OP relational_expression
@@ -1338,7 +1415,7 @@ extern "C"
 												string type2($<var.type>3);
 												
 												//can compare only equal types.
-												if( type1 != type2 and !(type1[0] == '*' and type2 == "NULL") )
+												if( type1 != type2 and !(type1[0] == '*' and type2 == "int") )
 												{
 													cout << "COMPILETIME ERROR: cannot compare two different type of operands" << endl;
 													cout << "At line : " << yylineno << endl;
@@ -1387,6 +1464,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "eq_expr -> eq_expr == rel_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| equality_expression NE_OP relational_expression
@@ -1395,7 +1474,7 @@ extern "C"
 												string type1($<var.type>1);
 												string type2($<var.type>3);
 
-												if( type1 != type2 and !(type1[0] == '*' and type2 == "NULL") )
+												if( type1 != type2 and !(type1[0] == '*' and type2 == "int") )
 												{
 													cout << "COMPILETIME ERROR: cannot compare two different type of operands" << endl;
 													cout << "At line : " << yylineno << endl;
@@ -1444,6 +1523,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "eq_expr -> eq_expr != rel_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}	
 			;
@@ -1455,6 +1536,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "logicaland_expr -> eq_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| logical_and_expression AND_OP equality_expression
@@ -1486,6 +1569,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "logicaland -> logicaland && eq_expr" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			;
@@ -1497,6 +1582,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "logicalor -> logicaland" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			| logical_or_expression OR_OP	logical_and_expression
@@ -1525,6 +1612,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "logical_or -> logicalor || logicaland" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;;
 												}
 											}
 			;
@@ -1536,6 +1625,8 @@ extern "C"
 												if( parseDebug == 1 )
 												{
 													cout << "expresson -> logicalor" << endl;
+													cout << "$<var.addr>$ = " << string($<var.addr>$) << endl;
+													cout << "$<var.type>$ = " << string($<var.type>$) << endl;
 												}
 											}
 			;
@@ -1590,13 +1681,13 @@ extern "C"
 												appendCode(string(t) + " =f " + "elevateToFloat ( " + val + " )");
 												appendCode(var + " =f " + string(t));
 											}
-											else if( ltype[0] == '*' and rtype == "NULL" )
+											else if( ltype[0] == '*' and rtype == "int" )
 											{
-												appendCode(var + " =i #0");
+												appendCode(var + " =i " + val);
 											}
 											else if( ltype == rtype )
 											{
-												appendCode(var + " =i " + val);
+												appendCode(var + " =" + ltype + " " + val);
 											}
 											else
 											{
@@ -1807,7 +1898,7 @@ extern "C"
 							}
 			brackets			
 							{							
-								string var($<str>1);
+								string var($<str>2);
 								for( int i = 0 ; i < declevels.size() ; i++ )
 								{
 									string temp = "_" + var + "_" + to_string(scopeStack.top()) + "_" + to_string(i+1); 
@@ -2069,21 +2160,6 @@ extern "C"
 										if( string($<var.type>1) == "string" )
 										{
 											appendCode("scan string " + name);
-											string var = name;
-											string origname1 = "";
-												for( int i = 0 ; i < var.size() ; i++ )
-												{
-													if( var[i] != '_' )
-													{
-														origname1 += var[i];
-													}
-													else
-													{
-														break;
-													}
-												}
-												SymbolTableEntry ste1 = getVariable(origname1);
-											appendCode(ste1.levels[0] + " =i len " + name);
 										}
 									}	
 			;
@@ -2426,6 +2502,7 @@ extern "C"
 												}
 		statement_block							
 												{
+													appendCode("return");
 												}
 		| VOID IDENTIFIER '('
 												{
@@ -2478,9 +2555,11 @@ extern "C"
 													string label = getLabel();
 													appendCode(label + ":");
 													setLabel(currentFunction, label);
+													appendCode("setReturn");
 												}
 		statement_block							
 												{
+													appendCode("return");
 												}
 		| ')'									
 												{
@@ -2489,9 +2568,11 @@ extern "C"
 													string label = getLabel();
 													appendCode(label + ":");
 													setLabel(currentFunction, label);
+													appendCode("setReturn");
 												}
 		statement_block							
 												{
+													appendCode("return");
 												}
 		;
 
@@ -2576,7 +2657,7 @@ int main( int argcount, char* arguements[] )
 	functionFrame += "code starts\nfunCall main.main\ncall " + getFunctionLabel("main", "main") + "\nexit\n";
 	TemporaryCode = functionFrame + TemporaryCode;
 
-	printSymbolTable();
+	//printSymbolTable();
 	Myfile << TemporaryCode;
 	Myfile.close();
 	return 0;

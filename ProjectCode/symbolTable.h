@@ -13,6 +13,7 @@ extern string dtype;
 extern stack<string> ifgoto;
 extern string forExprVal;
 extern int tempint;
+extern int strConstInt;
 extern stack<string> forIncrement;
 extern stack<string> forNext;
 extern int labelint;
@@ -26,6 +27,7 @@ extern bool newOrNot;
 
 char* getTemp( string type );
 char* getTemp();
+string getStringConst();
 char* getLabel();
 
 class SymbolTableEntry

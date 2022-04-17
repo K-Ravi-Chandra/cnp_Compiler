@@ -1,4 +1,9 @@
 void main()
 {
-	int arr[10][10];
+	int i = 10;
+	if( i == 10 )
+	{
+		i = 20;
+	}
+	i = 30;
 }

@@ -5,90 +5,12 @@ function start main
 void 0 _main_0 
 param start
 param end
-stack 4 st_11 0 
-int 4 _t28_11 0 
-void 0 _t29_11 0 
-int 4 _t30_11 0 
-void 0 _t31_11 0 
-void 0 _t32_11 0 
-int 4 _t33_11 0 
-void 0 _t34_11 0 
-
-function end
-
-struct end
-
-struct start node
-
-int 4 value_1 
-*node 0 prev_1 
-*node 0 next_1 
-
-struct end
-
-struct start stack
-
-*node 0 head_2 
-int 4 size_2 
-function start initialize
-
-void 0 _initialize_2 
-param start
-param end
-int 4 _t1_3 0 
-int 4 _t2_3 0 
-
-function end
-function start push
-
-void 0 _push_2 
-param start
-int 4 value_4 
-param end
-int 4 value_4 0 
-node 4 n_4 0 
-int 4 _t3_4 0 
-bool 1 _t4_4 0 
-int 4 _t5_5 0 
-int 4 _t6_5 0 
-node 4 _t7_6 0 
-*node 0 _t8_6 0 
-int 4 _t9_6 0 
-int 4 _t10_4 0 
-*node 0 _t11_4 0 
-
-function end
-function start pop
-
-int 4 _pop_2 
-param start
-param end
-int 4 _t12_7 0 
-bool 1 _t13_7 0 
-int 4 _t14_8 0 
-int 4 _t15_8 0 
-node 4 _t16_7 0 
-int 4 value_7 0 
-node 4 _t17_7 0 
-node 4 _t18_7 0 
-int 4 _t19_7 0 
-int 4 _t20_7 0 
-
-function end
-function start printStack
-
-void 0 _printStack_2 
-param start
-param end
-*node 0 n_9 0 
-int 4 _t21_10 0 
-int 4 i_10 0 
-int 4 _t22_10 0 
-bool 1 _t23_10 0 
-node 4 _t24_10 0 
-int 4 _t25_10 0 
-int 4 _t26_10 0 
-node 4 _t27_10 0 
+int 4 _t1_1 0 
+int 4 i_1 0 
+int 4 _t2_1 0 
+bool 1 _t3_1 0 
+int 4 _t4_2 0 
+int 4 _t5_1 0 
 
 function end
 
@@ -96,111 +18,24 @@ struct end
 
 code starts
 funCall main.main
-call label19
+call label1
 exit
 label1:
-_t1_3 =i #0
-this.size_2 =i _t1_3
-_t2_3 =i #0
-this.head_2 =i #0
+_t1_1 =i #10
+i_1 =i _t1_1
+_t2_1 =i #10
+if ( i_1 ==i _t2_1 ) goto label2
+_t3_1 =b #false
+goto label3
 label2:
-n_4.value =i value_4
-_t3_4 =i #0
-if ( this.head_2 ==i _t3_4 ) goto label3
-_t4_4 =b #false
-goto label4
+_t3_1 =b #true
 label3:
-_t4_4 =b #true
+if ( _t3_1 !=b #true ) goto label4
+_t4_2 =i #20
+i_1 =i _t4_2
+goto label5
 label4:
-if ( _t4_4 !=b #true ) goto label5
-_t5_5 =i #0
-n_4.prev =i #0
-_t6_5 =i #0
-n_4.next =i #0
-goto label6
 label5:
-n_4.prev =i this.head_2
-_t7_6 = *this.head_2
-_t8_6 = &n_4
-_t7_6.next =i _t8_6
-_t9_6 =i #0
-n_4.next =i #0
-label6:
-_t10_4 =i this.size_2
-this.size_2 =i this.size_2 +i #1
-_t11_4 = &n_4
-this.head_2 =i _t11_4
-label7:
-_t12_7 =i #0
-if ( this.head_2 ==i _t12_7 ) goto label8
-_t13_7 =b #false
-goto label9
-label8:
-_t13_7 =b #true
-label9:
-if ( _t13_7 !=b #true ) goto label10
-_t14_8 =i #1
-_t15_8 = minus _t14_8
-return _t15_8
-goto label11
-label10:
-label11:
-_t16_7 = *this.head_2
-value_7 =i _t16_7.value
-_t17_7 = *this.head_2
-this.head_2 =i _t17_7.prev
-_t18_7 = *this.head_2
-_t19_7 =i #0
-_t18_7.next =i #0
-_t20_7 =i this.size_2
-this.size_2 =i this.size_2 -i #1
-label12:
-_t21_10 =i #0
-i_10 =i _t21_10
-label13:
-_t22_10 =i #0
-if ( n_9 ==i _t22_10 ) goto label14
-_t23_10 =b #false
-goto label15
-label14:
-_t23_10 =b #true
-label15:
-if ( _t23_10 !=b #true ) goto label18
-goto label16
-label17:
-goto label13
-label16:
-_t24_10 = *n_9
-print int _t24_10.value
-_t25_10 =s #" "
-la _t26_10 _t25_10
-print string _t26_10
-_t27_10 = *n_9
-n_9 =i _t27_10.next
-goto label17
-label18:
-label19:
-funCall stack.push
-param st_11
-_t28_11 =i #10
-param _t28_11
-call 
-_t29_11 = returnVal
-funCall stack.push
-param st_11
-_t30_11 =i #5
-param _t30_11
-call 
-_t31_11 = returnVal
-funCall stack.printStack
-param st_11
-call 
-_t32_11 = returnVal
-funCall stack.pop
-param st_11
-call 
-_t33_11 = returnVal
-funCall stack.printStack
-param st_11
-call 
-_t34_11 = returnVal
+_t5_1 =i #30
+i_1 =i _t5_1
+return
