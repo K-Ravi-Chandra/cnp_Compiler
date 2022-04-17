@@ -14,10 +14,12 @@ int main( int argcount, char* arguments[] )
 	file.open(string(arguments[1]),ios::in); 
 	if (file.is_open())
 	{  
+		int d1 = 0;
 		string s;
 		vector<string> var;
 		while(getline(file, s))
 		{ 
+			mc += "\n #" + s + "\n";
 			//cout << s << endl;
 			char s1[s.size()+1];
 			strcpy(s1, s.c_str());
@@ -29,7 +31,12 @@ int main( int argcount, char* arguments[] )
 				tokens.push_back(token);
 				token = strtok(NULL, " ");
 			}
-
+			if(tokens[0] == "code" && tokens[1] == "starts")
+			{
+				d1 = 1;
+				continue;
+			}
+			if(d1 == 0) continue;
 			if(tokens[0].substr(tokens[0].size()-1, tokens[0].size()) == ":")
 			{
 				string lname = tokens[0]; 

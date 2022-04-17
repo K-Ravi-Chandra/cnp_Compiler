@@ -1,0 +1,2 @@
+code starts
+int _t_9 = #1
