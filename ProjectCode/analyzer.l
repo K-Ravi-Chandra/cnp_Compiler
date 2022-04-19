@@ -1,7 +1,7 @@
 %{
 	#include "y.tab.h" 
 	#include<string.h>
-	int DEBUG = 1;
+	int DEBUG = 0;
 %}
 ws				[ \t\v\f]
 digit			[0-9]

@@ -1,0 +1,23 @@
+string reverseString( string str )
+{
+	string rev = "";
+
+	for( int i = len(str) -1 ; i >= 0 ; i-- )
+	{
+		rev += str[i];
+	}
+	
+	return rev;
+}
+
+void main()
+{
+	string str;
+	print("Enter the string");
+	str = scan();
+
+	string rev = reverseString( str );
+
+	print("Reverse of ", str, " is " , rev);
+}
+

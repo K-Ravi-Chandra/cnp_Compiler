@@ -786,7 +786,28 @@ int main(int argcount, char* arguments[])
 					mc += "addiu $sp, $sp, " + to_string(size) + "\n";
 					mc += "sw $8, -4($sp)\n";
 				}
+				else if( tokens.size() == 1 )
+				{
+					int size = getVarSize(currentFunc);
+					size += 4;
+					mc += "addiu $sp, $sp, " + to_string(size) + "\n";
+				}
 				mc += "jr $ra\n";
+			}
+			else if( tokens[0] == "strconst" )
+			{
+				string temp = tokens[3].substr(1, tokens[3].length());
+
+				for( int i = 4 ; i < tokens.size() ; i++ )
+				{
+					temp +=  " " + tokens[i];
+				}
+				def += tokens[1] + ": .asciiz " + temp + "\n";
+
+				string addr = getStackAddr(tokens[2]);
+
+				mc += "la $8, " + tokens[1] + "\n";
+				mc += "sw $8, " + addr + "\n";
 			}
 			else if(tokens[0].substr(tokens[0].size()-1, tokens[0].size()) == ":")
 			{
@@ -798,6 +819,25 @@ int main(int argcount, char* arguments[])
 			{
 				string gotolabel = tokens[1];
 				mc += "j "+gotolabel+"\n";
+			}
+			else if(tokens[0] == "array")
+			{
+				mc += "li $8, 1\n";
+				string arrayName = getStackAddr(tokens[1]);
+				int size = stoi(tokens[2]);
+
+				for( int i = 3 ; i < tokens.size() ; i++ )
+				{
+					mc += "lw $9, " + getStackAddr(tokens[i]) + "\n";
+					mc += "mul $8, $8, $9\n";
+				}
+
+				mc += "li $10, " + to_string(size) + "\n";
+				mc += "mul $8, $8, $10\n";
+				mc += "li $2, 9\n";
+				mc += "move $4, $8\n";
+				mc += "syscall\n";
+				mc += "sw $2, "+arrayName+"\n";
 			}
 			// else if(tokens[0] == "int")
 			// {
@@ -1055,7 +1095,7 @@ int main(int argcount, char* arguments[])
 
 				if(type == "int")
 				{
-					if( var1[0] == '*' )
+					if( tokens[2][0] == '*' )
 					{
 						//var1 = getStackAddr(tokens[2]);
 						mc += "lw $8, " + var1/*.substr(1, var1.size())*/ + "\n";
@@ -1074,10 +1114,10 @@ int main(int argcount, char* arguments[])
 				}
 				else if(type == "char")
 				{
-					if( var1[0] == '*' )
+					if( tokens[2][0] == '*' )
 					{
 						//var1 = getStackAddr(tokens[2]);
-						// mc += "lw $8, " + var1/*.substr(1, var1.size())*/ + "\n";
+						mc += "lw $8, " + var1/*.substr(1, var1.size())*/ + "\n";
 						mc += "lb $8, ($8)\n";
 						mc += "li $2, 11\n"; 
 						mc += "move $4, $8\n";
@@ -1218,7 +1258,9 @@ int main(int argcount, char* arguments[])
 				{
 					if( tokens[2] == "len" )
 					{
-						mc += "lw $16, " + tokens[3] + "\n";
+						string str = getStackAddr(tokens[3]);
+						string lenVar = getStackAddr(tokens[0]);
+						mc += "lw $16, " + str + "\n";
 						string loop1 = "looplabel" + to_string(looplabel);
 						looplabel++;
 						string exit1 = "looplabel" + to_string(looplabel);
@@ -1233,7 +1275,7 @@ int main(int argcount, char* arguments[])
 						mc += "addi $t0, $t0, 1\n";
 						mc +=  "j " + loop1 + "\n";
 						mc += exit1 + ":\n";
-						mc += "sw $t0, " + tokens[0] + "\n";
+						mc += "sw $t0, " + lenVar + "\n";
 						continue;
 					}
 					string t_e = tokens[2];
@@ -1248,7 +1290,7 @@ int main(int argcount, char* arguments[])
 
 						mc += "li " + reg1 + ", " + t_e.substr( 1, t_e.size() )+"\n";
 					}
-					else if(v1[0] == '*')
+					else if(t_e[0] == '*')
 					{
 						v1 = getStackAddr(tokens[2]);
 						mc += "lw "+reg1+", "+v1/*.substr(1, v1.size())*/+"\n";
@@ -1280,7 +1322,7 @@ int main(int argcount, char* arguments[])
 						else if(v2[0] == '*')
 						{
 							v2 = getStackAddr(tokens[4]);
-							mc += "lw "+reg2+", "+v2.substr(1, v2.size())+"\n";
+							mc += "lw "+reg2+", "+v2+"\n";
 							mc += "lw "+reg2+", "+"("+reg2+")\n";
 						}
 						else
@@ -1307,7 +1349,7 @@ int main(int argcount, char* arguments[])
 							mc += "div "+ reg1 + ", " + reg2 + "\n";
 							mc += "mflo "+ reg3 + "\n";
 						}
-						else if( op == "%%i" )
+						else if( op == "%i" )
 						{
 							mc += "div "+ reg1 + ", " + reg2 + "\n";
 							mc += "mfhi "+ reg3 + "\n";
@@ -1530,7 +1572,10 @@ int main(int argcount, char* arguments[])
 					}
 					else if(tokens[2] == "strcatc")
 					{  
-						mc += "lw $16, " + tokens[3] + "\n"; 
+						string arg1 = getStackAddr(tokens[3]);
+						string arg2 = getStackAddr(tokens[4]);
+						string res = getStackAddr(tokens[0]);
+						mc += "lw $16, " + arg1 + "\n"; 
 
 						string loop1 = "looplabel" + to_string(looplabel);
 						looplabel++;
@@ -1553,7 +1598,7 @@ int main(int argcount, char* arguments[])
 						mc += "move $4, $t0\n";
 						mc += "syscall\n";
 
-						mc += "sw $2, " + tokens[0] + "\n";
+						mc += "sw $2, " + res + "\n";
 
 
 						string loop3 = "looplabel" + to_string(looplabel);
@@ -1562,7 +1607,7 @@ int main(int argcount, char* arguments[])
 						looplabel++;
 
 						mc += "add $t0, $zero, $zero\n";
-						mc += "lw $16, " + tokens[3] + "\n"; 
+						mc += "lw $16, " + arg1 + "\n"; 
 						mc += loop3 + ":\n";
 						mc += "add $t1, $16, $t0\n";
 						mc += "lb $t2, 0($t1)\n";
@@ -1575,12 +1620,13 @@ int main(int argcount, char* arguments[])
 
 						if( tokens[4][0] == '*' )
 						{
-							mc += "lw $t2, " + tokens[4].substr(1, tokens[4].length()) + "\n";
+							//mc += "lw $t2, " + tokens[4].substr(1, tokens[4].length()) + "\n";
+							mc += "lw $t2, " + arg2 + "\n";
 							mc += "lb $t2, 0($t2)\n";
 						}
 						else
 						{
-							mc += "lb $t2, " + tokens[4] + "\n";
+							mc += "lb $t2, " + arg2 + "\n";
 						}
 						mc += "add $2, $2, $t0\n";
 						mc += "sb $t2, 0($2)\n";
@@ -1599,7 +1645,10 @@ int main(int argcount, char* arguments[])
 					}
 					else
 					{
-						mc += "lw $16, " + tokens[2] + "\n"; 
+						string rvalue = getStackAddr(tokens[2]);
+						string lvalue = getStackAddr(tokens[0]);
+
+						mc += "lw $16, " + rvalue + "\n"; 
 
 						string loop1 = "looplabel" + to_string(looplabel);
 						looplabel++;
@@ -1621,7 +1670,7 @@ int main(int argcount, char* arguments[])
 						mc += "move $4, $t0\n";
 						mc += "syscall\n";
 
-						mc += "sw $2, " + tokens[0] + "\n";
+						mc += "sw $2, " + lvalue + "\n";
 
 						mc += "add $t0, $zero, $zero\n";
 
@@ -1630,7 +1679,7 @@ int main(int argcount, char* arguments[])
 						string out = "looplabel" + to_string(looplabel);
 						looplabel++;
 
-						mc += "lw $16, " + tokens[2] + "\n"; 
+						mc += "lw $16, " + rvalue + "\n"; 
 						mc += loop2 + ":\n";
 						mc += "add $t1, $16, $t0\n";
 						mc += "lb $t2, 0($t1)\n";

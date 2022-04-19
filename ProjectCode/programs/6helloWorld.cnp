@@ -1,0 +1,9 @@
+void printString(string s)
+{
+	print(s);
+}
+
+void main()
+{
+	printString("Hello, World!");
+}

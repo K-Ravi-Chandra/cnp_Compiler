@@ -123,6 +123,45 @@ int getSize( string dataType )
 	return size;
 }
 
+int getActualSize( string dataType )
+{
+	int size = 0;
+	if( dataType == "char" )
+	{
+		size = 1;
+	}
+	else if( dataType == "int" )
+	{
+		size = 4;
+	}
+	else if( dataType == "string" )
+	{
+		size = 4;
+	}
+	else if( dataType == "bool" )
+	{
+		size = 1;
+	}
+	else if( dataType == "float" )
+	{
+		size = 4;
+	}
+	else
+	{
+		for( int i = 0 ; i < globalTable.size() ; i++ )
+		{
+			if( globalTable[i].structName == dataType )
+			{
+				vector<SymbolTableEntry> table = globalTable[i].attributes;
+				for( int j = 0 ; j < table.size() ; j++ )
+				{
+					size += getActualSize(table[j].dataType);
+				}
+			}
+		}
+	}
+	return size;
+}
 void printSymbolTable()
 {
 	cout << "Printing Symbol Table:" << endl;
@@ -329,6 +368,11 @@ int insertParam( string structName, string functionName, string variableName, st
 					(*ste).dataType = dataType;
 					(*ste).size = getSize(dataType);
 					(*ste).levels = levels;
+					for( int level = 0 ; level < levels.size() ; level++ )
+					{
+						vector<string> sizeLevels;
+						insertVariable(structName, functionName, levels[level], "int", sizeLevels, "false");
+					}
 					if( scopeStack.size() == 0 )
 					{
 						(*ste).scope = 0;
@@ -372,6 +416,11 @@ int insertVariable( string structName, string functionName, string variableName,
 					(*ste).dataType = dataType;
 					(*ste).size = getSize(dataType);
 					(*ste).levels = levels;
+					for( int level = 0 ; level < levels.size() ; level++ )
+					{
+						vector<string> sizeLevels;
+						insertVariable(structName, functionName, levels[level], "int", sizeLevels, global);
+					}
 					(*ste).global = global;
 					if( scopeStack.size() == 0 )
 					{
@@ -488,6 +537,7 @@ SymbolTableEntry  getVariable( string structName, string functionName, string va
 									if( tab[k].scope == n )
 									{
 										ste = tab[k];
+										b = false;
 									}
 									scopeStack.pop();
 									sk.push(n);
@@ -499,7 +549,6 @@ SymbolTableEntry  getVariable( string structName, string functionName, string va
 									sk.pop();
 									scopeStack.push(n);
 								}
-								b = false;
 							}
 							else
 							{
@@ -701,6 +750,27 @@ bool checkMain()
 		}
 	}
 	return false;
+}
+
+void printScopeStack()
+{
+	cout << "stack content starts" << endl;
+	stack<int> sk;
+	while( !scopeStack.empty() )
+	{
+		int n = scopeStack.top();
+		scopeStack.pop();
+		sk.push(n);
+	}
+
+	while( !sk.empty() )
+	{
+		int n = sk.top();
+		cout << n << endl;
+		sk.pop();
+		scopeStack.push(n);
+	}
+	cout << "stack content ends" << endl;
 }
 
 

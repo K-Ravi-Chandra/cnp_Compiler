@@ -15,7 +15,7 @@ extern FILE* yyin;
 // these following three variables are used to enable debugging of the parsing, if they are set to one
 // then they print useful information.( this information is for developing purpose not for end users ).
 extern int DEBUG;		//to print information about tokeninzing
-int parseDebug = 1;		//to print information about parsing
+int parseDebug = 0;		//to print information about parsing
 int symbolDebug = 0;	//print the symbol table.
 
 //this contains the current lineno being parsed.
@@ -72,6 +72,8 @@ extern "C"
 												{
 													cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
 													cout << "At line : " << yylineno << endl;
+													printSymbolTable();
+													printScopeStack();
 													return -1;
 												}
 												else if( ste.name.substr(0, 4) == "this" )
@@ -245,11 +247,11 @@ extern "C"
 
 												if( string($<str>1) == "true" )
 												{
-													appendCode(string($<var.addr>$) + " =b #1");
+													appendCode(string($<var.addr>$) + " =b #true");
 												}
 												else
 												{
-													appendCode(string($<var.addr>$) + " =b #0");
+													appendCode(string($<var.addr>$) + " =b #false");
 												}
 
 												if( parseDebug == 1 )
@@ -362,7 +364,7 @@ extern "C"
 													appendCode("if ( " + string($<var.addr>3) + " <i " + temp + " ) goto " +  label1);
 													string strconst = getStringConst();
 													string var(getTemp("int"));
-													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index out of Bounds\"");
+													appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
 													appendCode("print string " + var);
 													appendCode("exit");
 													appendCode(label1 + ":");
@@ -370,7 +372,7 @@ extern "C"
 													
 													strconst = getStringConst();
 													var = (getTemp("int"));
-													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index is negative\"");
+													appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
 													appendCode("print string " + var);
 													
 													appendCode("exit");
@@ -395,10 +397,10 @@ extern "C"
 														string label1 = getLabel();
 														string label2 = getLabel();
 
-														appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + " ) goto " +  label1);
+														appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + "_" + to_string(ste.scope) + " ) goto " +  label1);
 														string strconst = getStringConst();
 													string var(getTemp("int"));
-													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index out of Bounds\"");
+													appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
 													appendCode("print string " + var);
 													appendCode("exit");
 													appendCode(label1 + ":");
@@ -406,7 +408,7 @@ extern "C"
 													
 													strconst = getStringConst();
 													var = (getTemp("int"));
-													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index is negative\"");
+													appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
 													appendCode("print string " + var);
 													
 													appendCode("exit");
@@ -414,7 +416,7 @@ extern "C"
 
 													string temp(getTemp("int"));
 
-													appendCode(temp + " =i " + string($<var.addr>3) + " *i #" + to_string(ste.size));
+													appendCode(temp + " =i " + string($<var.addr>3) + " *i #" + to_string(getActualSize(ste.dataType)));
 													
 													appendCode(temp + " =i " + string($<array.index>1) + " +i " + temp);
 
@@ -433,10 +435,10 @@ extern "C"
 												{
 														string label1 = getLabel();
 														string label2 = getLabel();
-														appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + " ) goto " +  label1);
+														appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + "_" + to_string(ste.scope) + " ) goto " +  label1);
 														string strconst = getStringConst();
 													string var(getTemp("int"));
-													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index out of Bounds\"");
+													appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
 													appendCode("print string " + var);
 													appendCode("exit");
 													appendCode(label1 + ":");
@@ -444,7 +446,7 @@ extern "C"
 													
 													strconst = getStringConst();
 													var = (getTemp("int"));
-													appendCode("strconst " + strconst + " " + var + "#" + "\"RUNTIME ERROR: Index is negative\"");
+													appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
 													appendCode("print string " + var);
 													
 													appendCode("exit");
@@ -457,10 +459,10 @@ extern "C"
 
 													for( int i = $<array.level>1 + 1; i < ste.levels.size() ; i++ )
 													{
-														appendCode(temp + " =i " + temp + " *i " + ste.levels[i]);
+														appendCode(temp + " =i " + temp + " *i " + ste.levels[i] + "_" + to_string(ste.scope));
 													}
 
-													appendCode(temp + " =i " + temp + " *i #" + to_string(ste.size));
+													appendCode(temp + " =i " + temp + " *i #" + to_string(getActualSize(ste.dataType)));
 
 													appendCode(temp + " =i " + string($<var.addr>3) + " *i " + temp );
 													appendCode(temp + " =i " + temp + " +i " + string($<array.index>1));
@@ -881,7 +883,8 @@ extern "C"
 
 												$<var.addr>$ = getTemp("int");
 
-												appendCode(string($<var.addr>$) + " =i len " + string($<str>3));
+												//string temp = ste.name + "_" + to_string(ste.scope);
+												appendCode(string($<var.addr>$) + " =i len " + ste.name + "_" + to_string(ste.scope));
 												if( parseDebug == 1 )
 												{	
 													cout << "unary_expr -> len '(' identifier ')'" << endl;
@@ -1899,12 +1902,15 @@ extern "C"
 			brackets			
 							{							
 								string var($<str>2);
+								string arrayInit = "array " + var + "_" + to_string(scopeStack.top()) + " " + to_string(getActualSize(dtype)) + " ";
 								for( int i = 0 ; i < declevels.size() ; i++ )
 								{
 									string temp = "_" + var + "_" + to_string(scopeStack.top()) + "_" + to_string(i+1); 
-									appendCode(temp + " =i " + declevels[i]);
+									appendCode(temp + "_" + to_string(scopeStack.top()) + " =i " + declevels[i]);
+									arrayInit += temp + "_" + to_string(scopeStack.top()) + " ";
 									declevels[i] = temp;
 								}
+								appendCode(arrayInit);
 								if( insertVariable(var, dtype, declevels, newOrNot) == -1 )
 								{
 									cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;

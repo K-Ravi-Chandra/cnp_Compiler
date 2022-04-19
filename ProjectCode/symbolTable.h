@@ -92,6 +92,9 @@ int setLabel(string functionName, string label);
 string getFunctionLabel(string structName, string functionName );
 void setCallStack(string structName, string functionName);
 bool checkMain();
+void printScopeStack();
+int getSize( string dataType );
+int getActualSize( string dataType );
 
 
 
