@@ -1,7 +1,0 @@
-void main()
-{
-	int n = 10;
-	int* naddr = $10;
-
-	print(naddr);
-}

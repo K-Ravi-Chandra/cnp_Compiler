@@ -187,7 +187,6 @@ int stackAddresses(string s, int pars)
 				size += var.size;
 				for(int i =0; pars>0 ; i++)
 				{
-					cout << "$$$$$$$$$$$$$$$$$$$$$$ entered for loop" << endl;
 					size += params.find(parameters[i])->second.size;
 					pars--;
 				}
@@ -313,15 +312,15 @@ int stackAddressesVars(string s, int var_index)
 			if(var_index >= 0 && var_index < no_vars)
 			{
 				/*
-				var = fn.returnValue;
-				size += var.size;
-				var_index--;
-				for(int i =0; var_index>0 ; i++)
-				{
-					size += vars.find(variables[i])->second.size;
-					var_index--;
-				}
-				*/
+				   var = fn.returnValue;
+				   size += var.size;
+				   var_index--;
+				   for(int i =0; var_index>0 ; i++)
+				   {
+				   size += vars.find(variables[i])->second.size;
+				   var_index--;
+				   }
+				 */
 				size = 4;
 				for( int i = variables.size()-1 ; i > var_index ; i-- )
 				{
@@ -699,7 +698,7 @@ int main(int argcount, char* arguments[])
 
 		}
 
-		printMap();
+		//printMap();
 		// cout << "Variables size : " << getVarSize("main","main" );
 		// cout << stackAddresses("main.fibonacci", 4)<< endl;
 		// cout << stackAdressesName("main.fibonacci", "n_5")<< endl << endl;
@@ -757,7 +756,7 @@ int main(int argcount, char* arguments[])
 			}
 			if(d1 == 0) continue;
 
-			cout << s << endl;
+			//cout << s << endl;
 
 			mc += "\n#" + s + "\n";
 			if(tokens[0] == "funCall")
@@ -782,7 +781,6 @@ int main(int argcount, char* arguments[])
 			}
 			else if( tokens[0] == "param" )
 			{
-				/*
 				if( tokens[1][0] == '*' )
 				{
 					mc += "lw $8, " + getStackAddr(tokens[1]) + "\n";
@@ -793,30 +791,29 @@ int main(int argcount, char* arguments[])
 				}
 				else
 				{
-					*/
-				int noOfLoads = stoi(tokens[2])/4;
+					int noOfLoads = stoi(tokens[2])/4;
 
-				int a = stackAddresses( funCall, paramCount );
-				cout << "param------------------------ = " << a << endl;
-				paramCount++;
-				mc += "li $9, 0\n";
-				mc += "li $10, -" + to_string(a) + "\n";
+					int a = stackAddresses( funCall, paramCount );
+					mc += "li $9, 0\n";
+					mc += "li $10, -" + to_string(a) + "\n";
 
-				mc += "add $10, $10, $sp\n";
+					mc += "add $10, $10, $sp\n";
 
-				int b = getStackAddrNo(tokens[1]);
-				mc += "li $11, " + to_string(b) + "\n";
-				mc += "add $11, $11, $sp\n";
-				for( int i = 0 ; i < noOfLoads ; i++ )
-				{
-					mc += "add $10, $10, $9\n";
-					mc += "add $11, $11, $9\n";
+					int b = getStackAddrNo(tokens[1]);
+					mc += "li $11, " + to_string(b) + "\n";
+					mc += "add $11, $11, $sp\n";
+					for( int i = 0 ; i < noOfLoads ; i++ )
+					{
+						mc += "add $10, $10, $9\n";
+						mc += "add $11, $11, $9\n";
 
-					mc += "lw $8, ($11)\n";
-					mc += "sw $8, ($10)\n";
+						mc += "lw $8, ($11)\n";
+						mc += "sw $8, ($10)\n";
 
-					mc += "addi $9, $9, 4\n";
+						mc += "addi $9, $9, 4\n";
+					}
 				}
+				paramCount++;
 			}
 			else if( tokens.size() == 3 and tokens[2] == "returnVal" )
 			{
@@ -1813,17 +1810,18 @@ int main(int argcount, char* arguments[])
 					}
 				}
 			}
-			}
-
 		}
-		mc = def + mc;
-		//cout<<mc;
-		file.close();
 
-		ofstream myfile("machine.asm");
-		myfile << mc;
-		myfile.close();
-
-
-		return 0;
 	}
+	mc = def + mc;
+	//cout<<mc;
+	file.close();
+
+	ofstream myfile("machine.asm");
+	myfile << mc;
+	cout << "Successfully generated machine code" << endl;
+	myfile.close();
+
+
+	return 0;
+}

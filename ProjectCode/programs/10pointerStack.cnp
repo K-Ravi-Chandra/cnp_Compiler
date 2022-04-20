@@ -50,6 +50,10 @@ var stack
 		{
 			(*tail).next = NULL;
 		}
+		else
+		{
+			head = NULL;
+		}
 		size--;
 
 		return value;

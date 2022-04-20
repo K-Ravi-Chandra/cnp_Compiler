@@ -15,7 +15,7 @@ extern FILE* yyin;
 // these following three variables are used to enable debugging of the parsing, if they are set to one
 // then they print useful information.( this information is for developing purpose not for end users ).
 extern int DEBUG;		//to print information about tokeninzing
-int parseDebug = 1;		//to print information about parsing
+int parseDebug = 0;		//to print information about parsing
 int symbolDebug = 0;	//print the symbol table.
 
 //this contains the current lineno being parsed.
@@ -581,7 +581,7 @@ extern "C"
 									string temp(getTemp("int"));
 
 									appendCode("la " + temp + " " + string($<array.addr>1));
-									appendCode("param *" + temp + " 4");
+									appendCode("param " + temp + " 4");
 									callStack.pop();
 								}
 			functionCall		{
@@ -612,7 +612,7 @@ extern "C"
 								}
 			| IDENTIFIER '(' 
 								{
-									SymbolTableEntry ste = getFunctionReturnAddress("main", string($<str>1));
+									SymbolTableEntry ste = getFunctionReturnAddress(currentStruct, string($<str>1));
 
 									if( ste.name == "" )
 									{
@@ -620,12 +620,20 @@ extern "C"
 										cout << "At line : " << yylineno << endl;
 										return 1;
 									}
-									appendCode("funCall main." + string($<str>1));
-									setCallStack("main", string($<str>1));
+									appendCode("funCall " + currentStruct + "." + string($<str>1));
+									setCallStack(currentStruct, string($<str>1));
+
+									if( currentStruct != "main" )
+									{
+										string temp(getTemp("int"));
+										appendCode("la " + temp + " this_" + to_string(callStack.top().scope));
+										appendCode("param " + temp + " 4");
+									}
+									callStack.pop();
 								}
 			functionCall
 								{
-									SymbolTableEntry ste = getFunctionReturnAddress("main", string($<str>1));
+									SymbolTableEntry ste = getFunctionReturnAddress(currentStruct, string($<str>1));
 
 									if( !callStack.empty() )
 									{
@@ -634,7 +642,7 @@ extern "C"
 										return -1;
 									}
 									
-									appendCode("call " + getFunctionLabel("main", string($<str>1)));
+									appendCode("call " + getFunctionLabel(currentStruct, string($<str>1)));
 									
 									$<array.completed>$ = 1;
 									
@@ -677,14 +685,24 @@ extern "C"
 										cout << "At line : " << yylineno << endl;
 										return -1;
 									}
-									else if( string($<var.type>1) != callStack.top().dataType )
+									else if( string($<var.type>1) != callStack.top().dataType and (string($<var.type>1)[0] == '*' and callStack.top().dataType != "int" ))
 									{
 										cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
 										cout << "Given parameter is of type " << string($<var.type>1) << ", required parameter is of type " << callStack.top().dataType << endl;
 										cout << "At line : " << yylineno << endl;
 										return -1;
 									}
-									appendCode("param " + string($<var.addr>1) + " " + to_string(callStack.top().size));
+									if( string($<var.type>1)[0] == '*' )
+									{
+										string addr = string($<var.addr>1);
+										//string temp(getTemp("int"));
+										//appendCode("la " + temp + " " + addr);
+										appendCode("param " + addr  + " " + to_string(callStack.top().size));
+									}
+									else
+									{
+										appendCode("param " + string($<var.addr>1) + " " + to_string(callStack.top().size));
+									}
 									callStack.pop();
 									if( parseDebug == 1 )
 									{
@@ -699,14 +717,22 @@ extern "C"
 										cout << "At line : " << yylineno << endl;
 										return -1;
 									}
-									else if( string($<var.type>1) != callStack.top().dataType )
+									else if( string($<var.type>3) != callStack.top().dataType and (string($<var.type>3)[0] == '*' and callStack.top().dataType != "int" ))
 									{
 										cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
 										cout << "Given parameter is of type " << string($<var.type>1) << ", required parameter is of type " << callStack.top().dataType << endl;
 										cout << "At line : " << yylineno << endl;
 										return -1;
 									}
-									appendCode("param " + string($<var.addr>3) + " " + to_string(callStack.top().size));
+									if( string($<var.type>3)[0] == '*' )
+									{
+										string addr = string($<var.addr>3);
+										appendCode("param " + addr  + " " + to_string(callStack.top().size));
+									}
+									else
+									{
+										appendCode("param " + string($<var.addr>3) + " " + to_string(callStack.top().size));
+									}
 									callStack.pop();
 									if( parseDebug == 1 )
 									{
@@ -1350,6 +1376,7 @@ extern "C"
 												string label1 = getLabel();
 												string label2 = getLabel();
 
+												cout << "in < type1 = " << type1 << ", type2 = " << type2 << endl;
 												if( type1 == "int" and type2 == "int" )
 												{
 													appendCode("if ( " + string($<var.addr>1) + " <i " + string($<var.addr>3) + " ) goto " + string(label1));
@@ -1660,8 +1687,8 @@ extern "C"
 												//if either of them is false then the result is false.
 
 												char* label1 = getLabel();
-												appendCode("if ( " + string($<var.addr>1) + " ==b false ) goto " + string(label1));
-												appendCode("if ( " + string($<var.addr>3) + " ==b false ) goto " + string(label1));
+												appendCode("if ( " + string($<var.addr>1) + " ==b #false ) goto " + string(label1));
+												appendCode("if ( " + string($<var.addr>3) + " ==b #false ) goto " + string(label1));
 												appendCode(string($<var.addr>$) + " =b #true");
 												char* label2 = getLabel();
 												appendCode("goto " + string(label2));
@@ -1703,8 +1730,8 @@ extern "C"
 
 												char* label1 = getLabel();
 												//if either of them is true then the resul is true.
-												appendCode("if ( " + string($<var.addr>1) + " == true ) goto " + string(label1));
-												appendCode("if ( " + string($<var.addr>3) + " == true ) goto " + string(label1));
+												appendCode("if ( " + string($<var.addr>1) + " ==b #true ) goto " + string(label1));
+												appendCode("if ( " + string($<var.addr>3) + " ==b #true ) goto " + string(label1));
 												appendCode(string($<var.addr>$) + " =b #false");
 												char* label2 = getLabel();
 												appendCode("goto " + string(label2));
@@ -2725,9 +2752,13 @@ extern "C"
 		;
 
 	functionArguements:
-		type_name IDENTIFIER
+		type_name stars IDENTIFIER
 											{
-												string var($<str>2);
+												for( int i = 0 ; i < starsCount ; i++ )
+												{
+													dtype = "*" + dtype;
+												}
+												string var($<str>3);
 												int r = insertParam( var, dtype, 0 );
 												if( r == -1 )
 												{
@@ -2736,9 +2767,13 @@ extern "C"
 													return -1;
 												}
 											}
-		| functionArguements ',' type_name IDENTIFIER
+		| functionArguements ',' type_name stars IDENTIFIER
 											{
-												string var($<str>4);
+												for( int i = 0 ; i < starsCount ; i++ )
+												{
+													dtype = "*" + dtype;
+												}
+												string var($<str>5);
 												if( insertParam(var, dtype, 0) == -1 )
 												{
 													cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
@@ -2803,7 +2838,7 @@ int main( int argcount, char* arguements[] )
 	functionFrame += "code starts\nfunCall main.main\ncall " + getFunctionLabel("main", "main") + "\nexit\n";
 	TemporaryCode = functionFrame + TemporaryCode;
 
-	printSymbolTable();
+	//printSymbolTable();
 	Myfile << TemporaryCode;
 	Myfile.close();
 	return 0;

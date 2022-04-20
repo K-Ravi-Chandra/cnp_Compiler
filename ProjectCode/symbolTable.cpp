@@ -380,7 +380,6 @@ int insertFunction( string structName, string returnType, string functionName, i
 			SymbolTableEntry returnSte = getFunctionReturnAddress( structName, functionName );
 			vector<string> levels = returnSte.levels;
 
-			cout << "levels for return type of " << returnSte.name << endl;
 			for( int level = 0 ; level < levels.size() ; level++ )
 			{
 				cout << levels[level] << endl;
@@ -440,7 +439,6 @@ int insertParam( string structName, string functionName, string variableName, st
 						levels.push_back(temp);
 					}
 
-					cout << "levels for insertparam of " << (*ste).name << endl;
 					for( int level = 0 ; level < levels.size() ; level++ )
 					{
 						cout << levels[level] << endl;
