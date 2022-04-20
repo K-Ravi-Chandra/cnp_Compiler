@@ -185,9 +185,9 @@ int stackAddresses(string s, int pars)
 			{
 				var = fn.returnValue;
 				size += var.size;
-				pars--;
 				for(int i =0; pars>0 ; i++)
 				{
+					cout << "$$$$$$$$$$$$$$$$$$$$$$ entered for loop" << endl;
 					size += params.find(parameters[i])->second.size;
 					pars--;
 				}
@@ -434,6 +434,27 @@ string getStackAddr(string str)
 	}
 	return to_string(k)+"($sp)";
 	//return "Nitesh";
+}
+
+int getStackAddrNo( string str )
+{
+	if(str.substr(0, 1) == "*")
+	{
+		int k = stackAdressesVarsName(currentFunc, str.substr(1, str.length()));
+		if(k == -1)
+		{
+			cout<<str<<" K is -1"<<endl;
+			exit(-1);
+		}
+		return k;
+	}
+	int k = stackAdressesVarsName(currentFunc, str);
+	if(k == -1)
+	{
+		cout<<str<<" K is -1"<<endl;
+		exit(-1);
+	}
+	return k;
 }
 
 int main(int argcount, char* arguments[])
@@ -761,12 +782,41 @@ int main(int argcount, char* arguments[])
 			}
 			else if( tokens[0] == "param" )
 			{
+				/*
+				if( tokens[1][0] == '*' )
+				{
+					mc += "lw $8, " + getStackAddr(tokens[1]) + "\n";
+					mc += "lw $8, ($8)\n";
+
+					int a = stackAddresses( funCall, paramCount );
+					mc += "sw $8, -" + to_string(a) + "($sp)\n";
+				}
+				else
+				{
+					*/
+				int noOfLoads = stoi(tokens[2])/4;
+
 				int a = stackAddresses( funCall, paramCount );
-				a += 4;
+				cout << "param------------------------ = " << a << endl;
 				paramCount++;
-				string addr = getStackAddr(tokens[1]);
-				mc += "lw $8, " + addr + "\n";
-				mc += "sw $8, -" + to_string(a) + "($sp)\n";
+				mc += "li $9, 0\n";
+				mc += "li $10, -" + to_string(a) + "\n";
+
+				mc += "add $10, $10, $sp\n";
+
+				int b = getStackAddrNo(tokens[1]);
+				mc += "li $11, " + to_string(b) + "\n";
+				mc += "add $11, $11, $sp\n";
+				for( int i = 0 ; i < noOfLoads ; i++ )
+				{
+					mc += "add $10, $10, $9\n";
+					mc += "add $11, $11, $9\n";
+
+					mc += "lw $8, ($11)\n";
+					mc += "sw $8, ($10)\n";
+
+					mc += "addi $9, $9, 4\n";
+				}
 			}
 			else if( tokens.size() == 3 and tokens[2] == "returnVal" )
 			{
@@ -1099,7 +1149,7 @@ int main(int argcount, char* arguments[])
 					{
 						//var1 = getStackAddr(tokens[2]);
 						mc += "lw $8, " + var1/*.substr(1, var1.size())*/ + "\n";
-						mc += "lw $8, ($8)\n";
+						mc += "lw $8, 0($8)\n";
 						mc += "li $2, 1\n"; 
 						mc += "move $4, $8\n";
 						mc += "syscall\n";
@@ -1229,8 +1279,15 @@ int main(int argcount, char* arguments[])
 			else if( tokens[0] == "la" )
 			{
 				string reg = "$8";
-				mc += "la " + reg + ", " + tokens[2] + "\n";
-				mc += "sw " + reg + ", " + tokens[1] + "\n";
+				if( tokens[2][0] == '*' )
+				{
+					mc += "lw $8, " + getStackAddr(tokens[2]) + "\n";
+				}
+				else
+				{
+					mc += "la " + reg + ", " + getStackAddr(tokens[2]) + "\n";
+				}
+				mc += "sw " + reg + ", " + getStackAddr(tokens[1]) + "\n";
 			}
 			else if( tokens[0] == "exit" )
 			{
@@ -1278,11 +1335,37 @@ int main(int argcount, char* arguments[])
 						mc += "sw $t0, " + lenVar + "\n";
 						continue;
 					}
+					else if( tokens[2] == "malloc" )
+					{
+						string addrSize = getStackAddr(tokens[3]);
+						string addrVar = getStackAddr(tokens[0]);
+
+						mc += "lw $8, " + addrSize + "\n";
+						mc += "li $2, 9\n";
+						mc += "move $4, $8\n";
+						mc += "syscall\n";
+						mc += "sw $2, " + addrVar + "\n";
+						continue;
+					}
+
 					string t_e = tokens[2];
 					if( tokens.size() == 4 )	//t1 = minus t2
 					{
 						v1 = getStackAddr(tokens[3]);
-						t_e = tokens[3];
+						mc += "lw "+reg1+", "+v1+"\n";
+						mc += "sub "+reg1+ ", $zero, "+reg1+"\n";
+						if( res[0] == '*')
+						{
+							res = getStackAddr(tokens[0]);
+							mc += "lw "+reg4+", "+res/*.substr(1, res.size())*/+"\n";
+							mc += "sw "+reg1+", "+"("+reg4+")\n";
+						}
+						else
+						{
+							res = getStackAddr(tokens[0]);
+							mc += "sw " + reg1 + ", " + res + "\n";
+						}
+						continue;
 					}
 
 					if( t_e[0] == '#')
@@ -1302,11 +1385,6 @@ int main(int argcount, char* arguments[])
 						mc += "lw "+reg1+", "+v1+"\n";
 					}
 
-
-					if( tokens.size() == 4 )
-					{
-						mc += "sub "+reg1+ ", $zero, "+reg1+"\n";
-					}
 
 					if( tokens.size() == 5 )
 					{
@@ -1735,17 +1813,17 @@ int main(int argcount, char* arguments[])
 					}
 				}
 			}
+			}
+
 		}
+		mc = def + mc;
+		//cout<<mc;
+		file.close();
 
+		ofstream myfile("machine.asm");
+		myfile << mc;
+		myfile.close();
+
+
+		return 0;
 	}
-	mc = def + mc;
-	//cout<<mc;
-	file.close();
-
-	ofstream myfile("machine.asm");
-	myfile << mc;
-	myfile.close();
-
-
-	return 0;
-}

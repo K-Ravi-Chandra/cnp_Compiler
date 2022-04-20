@@ -139,12 +139,10 @@ identifier		{letter}({letter}|{digit})*
 						}
 						return NULL_;
 					}
-"new"				{
+"malloc"			{
 						if( DEBUG == 1 )
-						{
-							printf("VAR : %s\n", yytext);
-						}
-						return NEW;
+							printf("MALLOC : %s\n", yytext);
+						return MALLOC;
 					}
 "+="				{
 						if( DEBUG == 1) 

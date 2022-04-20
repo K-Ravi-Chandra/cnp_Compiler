@@ -52,7 +52,7 @@ class FunctionTable
 		vector<SymbolTableEntry> parameters;
 		vector<SymbolTableEntry> table;
 
-		FunctionTable(string name, string rType );
+		FunctionTable(string name, string rType, int levelCount );
 		FunctionTable();
 };
 
@@ -72,13 +72,13 @@ extern stack<SymbolTableEntry> callStack;
 
 int insertStruct( string structName );
 int insertAttribute( string structName, string variableName, string dataType, vector<string> levels);
-int insertFunction( string returnType, string functionName );
-int insertParam( string variableName, string dataType, vector<string>levels );
+int insertFunction( string returnType, string functionName, int levelCount );
+int insertParam( string variableName, string dataType, int levelCount );
 int insertVariable( string variableName, string dataType, vector<string> levels , bool global);
 
 int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels, bool global );
-int insertParam( string structName, string functionName, string variableName, string dataType, vector<string> levels );
-int insertFunction( string structName, string returnType, string functionName );
+int insertParam( string structName, string functionName, string variableName, string dataType, int levelCount );
+int insertFunction( string structName, string returnType, string functionName, int levelCount );
 
 SymbolTableEntry getStructAttribute( string structName, string variableName );
 FunctionTable getStructFunction( string structName, string functionName );
@@ -95,6 +95,8 @@ bool checkMain();
 void printScopeStack();
 int getSize( string dataType );
 int getActualSize( string dataType );
+int getAttributeOffset( string structName, string attributeName );
+bool checkStruct( string structName );
 
 
 

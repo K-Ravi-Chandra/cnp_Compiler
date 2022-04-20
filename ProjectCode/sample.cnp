@@ -1,16 +1,89 @@
+var node
+{
+	int value;
+	var node* prev;
+	var node* next;
+}
+
+var stack
+{
+	var node* head;
+	var node* tail;
+	int size;
+
+	void initialize()
+	{
+		size = 0;
+		head = NULL;
+	}
+
+	void push( int value )
+	{
+		if( head == NULL )
+		{
+			head = malloc(sizeof( var node));
+			(*head).value = value;
+			tail = head;
+		}
+		else
+		{
+			(*tail).next = malloc(sizeof(var node));
+			(*(*tail).next).value = value;
+			(*(*tail).next).next = NULL;
+			(*(*tail).next).prev = tail;
+
+			tail = (*tail).next;
+		}
+		size++;
+	}
+
+	int pop()
+	{
+		if( tail == NULL )
+		{
+			return -1;
+		}
+
+		int value = (*tail).value;
+		tail = (*tail).prev;
+		if( tail != NULL )
+		{
+			(*tail).next = NULL;
+		}
+		size--;
+
+		return value;
+	}
+
+	void printStack()
+	{
+		//print("Printing the stack");
+		var node* n = head;
+		for( int i = 0 ; n != NULL ; i++ )
+		{
+			prints((*n).value, " ");
+			n = (*n).next;
+		}
+		print();
+	}
+}
+
 void main()
 {
-	int arr[10][10];
-	int brr[20][20];
-	int crr[30][30];
+	var stack st;
+	
+	st.initialize();
 
-	arr[1][2] = 10;
-	brr[3][4] = 20;
-	crr[5][6] = arr[1][2] + brr[3][4];
+	for( int i = 0 ; i < 10 ; i++ )
+	{
+		st.push(i);
+		st.printStack();
+	}
 
-
-	print(arr[1][2]);
-	print(brr[3][4]);
-	print(crr[5][6]);
-
+	for( int i = 0 ; i < 10 ; i++ )
+	{
+		st.pop();
+		st.printStack();
+	}
 }
+
