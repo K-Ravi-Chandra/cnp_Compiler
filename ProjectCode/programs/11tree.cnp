@@ -153,11 +153,6 @@ void main()
 	var tree t;
 	t.initialize();
 	
-	print("res1 = ", t.search(1));
-	print("res2 = ", t.search(2));
-	print("res3 = ", t.search(3));
-	
-
 	for( int i = 0 ; i < 10 ; i++ )
 	{
 		int n;

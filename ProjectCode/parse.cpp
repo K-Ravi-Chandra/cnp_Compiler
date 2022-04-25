@@ -14,9 +14,7 @@ struct Var {
 	string name;
 	int global =-1;
 };
-
-struct function
-{
+struct function {
 	string name;
 	vector<string> parameters;  
 	vector<string> variables;
@@ -851,6 +849,8 @@ int main(int argcount, char* arguments[])
 				}
 				def += tokens[1] + ": .asciiz " + temp + "\n";
 
+				cout << "temp = " << temp << endl;
+				cout << "tokens[2] = " << tokens[2] << endl;
 				string addr = getStackAddr(tokens[2]);
 
 				mc += "la $8, " + tokens[1] + "\n";
@@ -1180,10 +1180,19 @@ int main(int argcount, char* arguments[])
 				}
 				else if(type == "string")
 				{
-
-					mc += "li $2, 4\n"; 
-					mc += "lw $4, " + var1 +"\n";
-					mc += "syscall\n";
+					if( tokens[2][0] == '*' )
+					{
+						mc += "li $2, 4\n"; 
+						mc += "lw $4, " + var1 +"\n";
+						mc += "lw $4, ($4)\n";
+						mc += "syscall\n";
+					}
+					else
+					{
+						mc += "li $2, 4\n"; 
+						mc += "lw $4, " + var1 +"\n";
+						mc += "syscall\n";
+					}
 				}
 				else if(type == "float")
 				{
@@ -1349,12 +1358,23 @@ int main(int argcount, char* arguments[])
 					if( tokens.size() == 4 )	//t1 = minus t2
 					{
 						v1 = getStackAddr(tokens[3]);
-						mc += "lw "+reg1+", "+v1+"\n";
+						
+						if( tokens[3][0] == '*')
+						{
+							mc += "lw "+reg1+", "+v1 +"\n";
+							mc += "lw "+reg1+", "+"("+reg1+")\n";
+						}
+						else
+						{
+							mc += "lw "+reg1+", "+v1+"\n";
+						}
+						
 						mc += "sub "+reg1+ ", $zero, "+reg1+"\n";
+
 						if( res[0] == '*')
 						{
 							res = getStackAddr(tokens[0]);
-							mc += "lw "+reg4+", "+res/*.substr(1, res.size())*/+"\n";
+							mc += "lw "+reg4+", "+res +"\n";
 							mc += "sw "+reg1+", "+"("+reg4+")\n";
 						}
 						else
@@ -1720,10 +1740,44 @@ int main(int argcount, char* arguments[])
 					}
 					else
 					{
+						v1 = getStackAddr(tokens[3]);
+						
+						if( tokens[3][0] == '*')
+						{
+							mc += "lw "+reg1+", "+v1 +"\n";
+							mc += "lw "+reg1+", "+"("+reg1+")\n";
+						}
+						else
+						{
+							mc += "lw "+reg1+", "+v1+"\n";
+						}
+						
+						mc += "sub "+reg1+ ", $zero, "+reg1+"\n";
+
+						if( res[0] == '*')
+						{
+							res = getStackAddr(tokens[0]);
+							mc += "lw "+reg4+", "+res +"\n";
+							mc += "sw "+reg1+", "+"("+reg4+")\n";
+						}
+						else
+						{
+							res = getStackAddr(tokens[0]);
+							mc += "sw " + reg1 + ", " + res + "\n";
+						}
+						/*
 						string rvalue = getStackAddr(tokens[2]);
 						string lvalue = getStackAddr(tokens[0]);
 
-						mc += "lw $16, " + rvalue + "\n"; 
+						if( tokens[2][0] == '*' )
+						{
+							mc += "lw $16, " + rvalue + "\n"; 
+							mc += "lw $16, ($16)\n";
+						}
+						else
+						{
+							mc += "lw $16, " + rvalue + "\n"; 
+						}
 
 						string loop1 = "looplabel" + to_string(looplabel);
 						looplabel++;
@@ -1764,6 +1818,7 @@ int main(int argcount, char* arguments[])
 						mc += "beq $t2, $zero, " + out + "\n";
 						mc += "j " + loop2 + "\n";
 						mc += out + ":\n";
+						*/
 					}
 
 				}

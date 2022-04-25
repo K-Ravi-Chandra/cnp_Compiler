@@ -1,0 +1,8 @@
+void main()
+{
+	string arr[10];
+
+	arr[2] = "poorna";
+
+	print(arr[2]);
+}

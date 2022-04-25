@@ -40,7 +40,6 @@ class SymbolTableEntry
 		int size;			//size of the variable in bytes	
 		bool array;			//bool variable specifying if it is an array or not.
 		int scope;			//scope in which it is defined and to which it belongs to.
-		bool global;
 };
 
 class FunctionTable
@@ -74,9 +73,9 @@ int insertStruct( string structName );
 int insertAttribute( string structName, string variableName, string dataType, vector<string> levels);
 int insertFunction( string returnType, string functionName, int levelCount );
 int insertParam( string variableName, string dataType, int levelCount );
-int insertVariable( string variableName, string dataType, vector<string> levels , bool global);
+int insertVariable( string variableName, string dataType, vector<string> levels);
 
-int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels, bool global );
+int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels );
 int insertParam( string structName, string functionName, string variableName, string dataType, int levelCount );
 int insertFunction( string structName, string returnType, string functionName, int levelCount );
 
@@ -84,6 +83,7 @@ SymbolTableEntry getStructAttribute( string structName, string variableName );
 FunctionTable getStructFunction( string structName, string functionName );
 SymbolTableEntry getVariable( string variableName );
 
+char* getCharArray( string str );
 void appendCode( string statement );
 void printSymbolTable();
 SymbolTableEntry getFunctionReturnAddress(string structName, string functionName);
