@@ -61,6 +61,7 @@ var stack
 
 	void printStack()
 	{
+		prints("Stack Content: ");
 		var node* n = head;
 		for( int i = 0 ; n != NULL ; i++ )
 		{
@@ -74,18 +75,34 @@ var stack
 void main()
 {
 	var stack st;
-	
 	st.initialize();
 
-	for( int i = 0 ; i < 10 ; i++ )
+	for( ; true ; )
 	{
-		st.push(i);
-		st.printStack();
-	}
-
-	for( int i = 0 ; i < 10 ; i++ )
-	{
-		st.pop();
+		print("\nEnter 1 to push,  2 to pop, 3 to get the size, any other key to break");
+		
+		int op;
+		
+		op = scan();
+		if( op == 1 )
+		{
+			int val;
+			print("Enter the value");
+			val = scan();
+			st.push(val);
+		}
+		elif( op == 2 )
+		{
+			st.pop();
+		}
+		elif( op == 3 )
+		{
+			print("Size = ", st.size);
+		}
+		else
+		{
+			break;
+		}
 		st.printStack();
 	}
 }

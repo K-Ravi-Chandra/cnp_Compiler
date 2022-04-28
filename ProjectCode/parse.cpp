@@ -144,6 +144,70 @@ int getVarSize(string s)
 	return size;
 }
 
+int getVariableSize( string s, string var_name )
+{
+	string parent_fn = "";
+	string child_fn = "";
+
+	string word = "";
+	for(auto x : s)
+	{
+		if(x == '.')
+		{
+			parent_fn = word;
+			word = "";
+		}
+		else
+		{
+			word += x;
+		}
+	}
+	child_fn = word;
+
+	int size = 0;
+	if(m.find(parent_fn)!= m.end())
+	{
+		struct DS ds = m.find(parent_fn)->second;
+		map <string, struct function> funcs = ds.funcs;
+		if(funcs.find(child_fn)!= funcs.end())
+		{
+			struct function fn = funcs.find(child_fn)->second;
+
+			map <string, struct Var> vars = fn.vars;
+			vector <string> variables = fn.variables;
+
+			int index= 0;
+			for(index= 0 ; index < variables.size(); index++)
+			{
+				if(variables[index] == var_name)
+					break;
+			}
+
+			if (index != variables.size())
+			{
+				size = vars[variables[index]].size;
+			}
+			else 
+			{
+				cout << "Could'nt find the Variable" << endl;
+				return -1;
+			}
+
+		}
+		else
+		{
+			cout << "Couldn't find the given fn : $" + child_fn + "$ in funcs map "<< endl;
+			return -1;
+		}
+	}
+	else
+	{
+		cout << "Couldn't find the given struct : $" + parent_fn + "$ in map "<< endl;
+		return -1;
+	}
+	return size;
+}
+
 int stackAddresses(string s, int pars)
 {
 	string parent_fn = "";
@@ -345,6 +409,65 @@ int stackAddressesVars(string s, int var_index)
 	return size;
 }
 
+int getArrayOffset( string s, int pars, int sizeno )
+{
+	string parent_fn = "";
+	string child_fn = "";
+
+	string word = "";
+	for(auto x : s)
+	{
+		if(x == '.')
+		{
+			parent_fn = word;
+			word = "";
+		}
+		else
+		{
+			word += x;
+		}
+	}
+	child_fn = word;
+
+	int size = 0;
+	if(m.find(parent_fn)!= m.end())
+	{
+		struct DS ds = m.find(parent_fn)->second;
+		map <string, struct function> funcs = ds.funcs;
+		if(funcs.find(child_fn)!= funcs.end())
+		{
+			struct function fn = funcs.find(child_fn)->second;
+
+			map <string, struct Var> params = fn.params;
+			vector <string> parameters = fn.parameters;
+
+			int no_params = parameters.size();
+			struct Var var ;
+			if(pars > 0 && pars <= no_params)
+			{
+				cout << "parameter---- name = " << params.find(parameters[pars-1])->second.name << endl;
+
+			}
+			else
+			{
+				cout << "There are less parameters than given " << endl;
+				return -1;
+			}
+		}
+		else
+		{
+			cout << "Couldn't find the given fn : cc" + child_fn + "cc in funcs map "<< endl;
+			return -1;
+		}
+	}
+	else
+	{
+		cout << "Couldn't find the given struct : ss" + parent_fn + "ss in map "<< endl;
+		return -1;
+	}
+	return size;
+}
+
 int stackAdressesVarsName(string s, string var_name)
 {
 	string parent_fn = "";
@@ -411,6 +534,7 @@ int stackAdressesVarsName(string s, string var_name)
 
 string currentFunc;
 string funCall;
+
 string getStackAddr(string str)
 {
 	if(str.substr(0, 1) == "*")
@@ -754,7 +878,7 @@ int main(int argcount, char* arguments[])
 			}
 			if(d1 == 0) continue;
 
-			//cout << s << endl;
+			cout << s << endl;
 
 			mc += "\n#" + s + "\n";
 			if(tokens[0] == "funCall")
@@ -811,25 +935,66 @@ int main(int argcount, char* arguments[])
 						mc += "addi $9, $9, 4\n";
 					}
 				}
+
+				if( tokens.size() > 3 )
+				{
+					for( int i = 3 ; i < tokens.size() ; i++ )
+					{
+						getArrayOffset( funCall, paramCount , i-3 );
+					}
+				}
 				paramCount++;
 			}
 			else if( tokens.size() == 3 and tokens[2] == "returnVal" )
 			{
+				int a = getStackAddrNo(tokens[0]);
+
+				cout << "a = " << a << endl;
+
+				int noOfLoads = getVariableSize(currentFunc, tokens[0])/4;
+
+				cout << "no of Loads = " << noOfLoads <<endl;
+
+				for( int i = 0 ; i < noOfLoads ; i++ )
+				{
+					mc += "lw $8 -" + to_string((noOfLoads-i)*4) + "($sp)\n";
+					mc += "sw $8 " + to_string(a+i*4) + "($sp)\n";
+				}
+				/*
 				mc += "lw $8, -4($sp)\n";
 				string addr = getStackAddr(tokens[0]);
 				mc += "sw $8, " + addr + "\n";
+				*/
 			}
 			else if( tokens[0] == "return" )
 			{
 				mc += "lw $ra, 0($sp)\n";
 				if( tokens.size() != 1 )
 				{
-					string addr = getStackAddr(tokens[1]);
+					//string addr = getStackAddr(tokens[1]);
+					int b = getStackAddrNo(tokens[1]);
+
 					int size = getVarSize(currentFunc);
 					size += 4;
-					mc += "lw $8, " + addr + "\n";
+					//mc += "addiu $sp, $sp, " + to_string(size) + "\n";
+
+					cout << "b = " << b << endl;
+					int noOfLoads = getVariableSize(currentFunc, tokens[1])/4;
+					cout << "no of Loads = " << noOfLoads <<endl;
+
+					for( int i = 0 ; i < noOfLoads ; i++ )
+					{
+						mc += "lw $" + to_string(8+i) + " " + to_string(b+i*4) + "($sp)\n";
+					}
+
 					mc += "addiu $sp, $sp, " + to_string(size) + "\n";
-					mc += "sw $8, -4($sp)\n";
+
+					for( int i = 0 ; i < noOfLoads ; i++ )
+					{
+						mc += "sw $" + to_string(8+i) + " -" + to_string((noOfLoads - i)*4) + "($sp)\n";
+					}
+					//mc += "lw $8, " + addr + "\n";
+					//mc += "sw $8, -4($sp)\n";
 				}
 				else if( tokens.size() == 1 )
 				{
@@ -849,8 +1014,6 @@ int main(int argcount, char* arguments[])
 				}
 				def += tokens[1] + ": .asciiz " + temp + "\n";
 
-				cout << "temp = " << temp << endl;
-				cout << "tokens[2] = " << tokens[2] << endl;
 				string addr = getStackAddr(tokens[2]);
 
 				mc += "la $8, " + tokens[1] + "\n";
@@ -1358,7 +1521,7 @@ int main(int argcount, char* arguments[])
 					if( tokens.size() == 4 )	//t1 = minus t2
 					{
 						v1 = getStackAddr(tokens[3]);
-						
+
 						if( tokens[3][0] == '*')
 						{
 							mc += "lw "+reg1+", "+v1 +"\n";
@@ -1368,7 +1531,7 @@ int main(int argcount, char* arguments[])
 						{
 							mc += "lw "+reg1+", "+v1+"\n";
 						}
-						
+
 						mc += "sub "+reg1+ ", $zero, "+reg1+"\n";
 
 						if( res[0] == '*')
@@ -1460,7 +1623,7 @@ int main(int argcount, char* arguments[])
 					if( res[0] == '*')
 					{
 						res = getStackAddr(tokens[0]);
-						mc += "lw "+reg4+", "+res/*.substr(1, res.size())*/+"\n";
+						mc += "lw "+reg4+", "+res+"\n";
 						mc += "sw "+resreg+", "+"("+reg4+")\n";
 					}
 					else
@@ -1469,90 +1632,108 @@ int main(int argcount, char* arguments[])
 						mc += "sw " + resreg + ", " + res + "\n";
 					}
 				}
-				// else if( eq == "=f")
-				// {
-				// 	v1 = getStackAddr(tokens[2]);
-				//     string t_r = tokens[2];
-				// 	if( tokens.size() == 4 )	//t1 = minus t2
-				// 	{
-				// 		v1 = getStackAddr(tokens[3]);
-				//         t_r = tokens[3];
-				// 	}
+				else if( eq == "=v" )
+				{
+					int a = getStackAddrNo(tokens[0]);
+					int b = getStackAddrNo(tokens[2]);
 
-				// 	if( t_r[0] == '#')
-				// 	{
-				// 		mc += "li.s " + f1 + ", " + t_r.substr( 1, t_r.size() )+"\n";
-				// 	}
-				// 	else if(v1[0] == '*')
-				// 	{
-				// 		mc += "lwc1 "+f1+", "+v1.substr(1, v1.size())+"\n";
-				// 		mc += "lwc1 "+f1+", "+"("+f1+")\n";
-				// 	}
-				// 	else
-				// 	{
-				// 		mc += "lwc1 "+f1+", "+v1+"\n";
-				// 	}
+					cout << "a = " << a << endl;
+					cout << "b = " << b << endl;
 
-				// 	if( tokens.size() == 4 )
-				// 	{
-				// 		mc += "sub.s "+f1+ ", $zero, "+f1+"\n";
-				// 	}
+					int noOfLoads = getVariableSize(currentFunc, tokens[0])/4;
+
+					cout << "no of Loads = " << noOfLoads <<endl;
+
+					for( int i = 0 ; i < noOfLoads ; i++ )
+					{
+						mc += "lw $8 " + to_string(b+i*4) + "($sp)\n";
+						mc += "sw $8 " + to_string(a+i*4) + "($sp)\n";
+					}
+				}
+				else if( eq == "=f")
+				{
+					v1 = getStackAddr(tokens[2]);
+					string t_r = tokens[2];
+					if( tokens.size() == 4 )	//t1 = minus t2
+					{
+						v1 = getStackAddr(tokens[3]);
+						t_r = tokens[3];
+					}
+
+					if( t_r[0] == '#')
+					{
+						mc += "li.s " + f1 + ", " + t_r.substr( 1, t_r.size() )+"\n";
+					}
+					else if(v1[0] == '*')
+					{
+						mc += "lwc1 "+f1+", "+v1.substr(1, v1.size())+"\n";
+						mc += "lwc1 "+f1+", "+"("+f1+")\n";
+					}
+					else
+					{
+						mc += "lwc1 "+f1+", "+v1+"\n";
+					}
+
+					if( tokens.size() == 4 )
+					{
+						mc += "sub.s "+f1+ ", $zero, "+f1+"\n";
+					}
 
 
-				// 	if( tokens.size() == 5 )
-				// 	{
-				// 		op = tokens[3];
-				// 		v2 = tokens[4];
-				// 		int t2 = 0;
+					if( tokens.size() == 5 )
+					{
+						op = tokens[3];
+						v2 = tokens[4];
+						int t2 = 0;
 
-				// 		if( v2[0] == '#')
-				// 		{
-				// 			mc += "li.s " + f2 + ", " + v2.substr( 1, v2.size() )+"\n";
-				// 		}
-				// 		else if(v2[0] == '*')
-				// 		{
-				// 			mc += "lwc1 "+f2+", "+v2.substr(1, v2.size())+"\n";
-				// 			mc += "lwc1 "+f2+", "+"("+f2+")\n";
-				// 		}
-				// 		else
-				// 		{
-				// 			mc += "lwc1 "+f2+", "+v2+"\n";
-				// 		}
+						if( v2[0] == '#')
+						{
+							mc += "li.s " + f2 + ", " + v2.substr( 1, v2.size() )+"\n";
+						}
+						else if(v2[0] == '*')
+						{
+							mc += "lwc1 "+f2+", "+v2.substr(1, v2.size())+"\n";
+							mc += "lwc1 "+f2+", "+"("+f2+")\n";
+						}
+						else
+						{
+							mc += "lwc1 "+f2+", "+v2+"\n";
+						}
 
-				// 		if(op == "+f")
-				// 		{
-				// 			mc += "add.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
-				// 		}
-				// 		else if(op == "-f")
-				// 		{
-				// 			mc += "sub.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
-				// 		}
-				// 		else if(op == "*f")
-				// 		{
-				// 			mc += "mul.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
-				// 		}
-				// 		else if(op == "/f")
-				// 		{
-				// 			mc += "div.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
-				// 		}
-				// 		resreg = f3;
-				// 	}
+						if(op == "+f")
+						{
+							mc += "add.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
+						}
+						else if(op == "-f")
+						{
+							mc += "sub.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
+						}
+						else if(op == "*f")
+						{
+							mc += "mul.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
+						}
+						else if(op == "/f")
+						{
+							mc += "div.s "+ f3 + ", " + f1 + ", " + f2 + "\n";
+						}
+						resreg = f3;
+					}
 
-				// 	if( tokens.size() == 3 or tokens.size() == 4 )
-				// 	{
-				// 		resreg = f1;
-				// 	}
+					if( tokens.size() == 3 or tokens.size() == 4 )
+					{
+						resreg = f1;
+					}
 
-				// 	if( res[0] == '*')
-				// 	{
-				// 		mc += "lwc1 " + f4 + ", " + res.substr(1, res.length()) + "\n";
-				// 		mc += "swc1 " + resreg + ", (" + f4 + ")\n";  
-				// 	}
-				// 	else
-				// 	{
-				// 		mc += "swc1 " + resreg + ", " + res + "\n";
-				// 	}
-				// }
+					if( res[0] == '*')
+					{
+						mc += "lwc1 " + f4 + ", " + res.substr(1, res.length()) + "\n";
+						mc += "swc1 " + resreg + ", (" + f4 + ")\n";  
+					}
+					else
+					{
+						mc += "swc1 " + resreg + ", " + res + "\n";
+					}
+				}
 				else if( eq == "=b" )
 				{
 					v1 = tokens[2];
@@ -1740,85 +1921,28 @@ int main(int argcount, char* arguments[])
 					}
 					else
 					{
-						v1 = getStackAddr(tokens[3]);
-						
-						if( tokens[3][0] == '*')
+						v1 = getStackAddr(tokens[2]);
+
+						if( tokens[2][0] == '*')
 						{
-							mc += "lw "+reg1+", "+v1 +"\n";
-							mc += "lw "+reg1+", "+"("+reg1+")\n";
+							mc += "lw $8, "+v1 +"\n";
+							mc += "lw $8, ($8)\n";
 						}
 						else
 						{
-							mc += "lw "+reg1+", "+v1+"\n";
+							mc += "lw $8, "+v1+"\n";
 						}
-						
-						mc += "sub "+reg1+ ", $zero, "+reg1+"\n";
 
+						res = getStackAddr(tokens[0]);
 						if( res[0] == '*')
 						{
-							res = getStackAddr(tokens[0]);
-							mc += "lw "+reg4+", "+res +"\n";
-							mc += "sw "+reg1+", "+"("+reg4+")\n";
+							mc += "lw $9, "+res +"\n";
+							mc += "sw $8, ($9)\n";
 						}
 						else
 						{
-							res = getStackAddr(tokens[0]);
-							mc += "sw " + reg1 + ", " + res + "\n";
+							mc += "sw $8, " + res + "\n";
 						}
-						/*
-						string rvalue = getStackAddr(tokens[2]);
-						string lvalue = getStackAddr(tokens[0]);
-
-						if( tokens[2][0] == '*' )
-						{
-							mc += "lw $16, " + rvalue + "\n"; 
-							mc += "lw $16, ($16)\n";
-						}
-						else
-						{
-							mc += "lw $16, " + rvalue + "\n"; 
-						}
-
-						string loop1 = "looplabel" + to_string(looplabel);
-						looplabel++;
-						string exit1 = "looplabel" + to_string(looplabel);
-						looplabel++;
-
-						mc += "addi $t0, $zero, 0\n";
-						mc += loop1  + ":\n";
-						mc += "lb $t1, 0($16)\n";
-						mc += "beqz $t1, " + exit1 + "\n";
-
-						mc += "addi $16, $16, 1\n";
-						mc += "addi $t0, $t0, 1\n";
-						mc +=  "j " + loop1 + "\n";
-						mc += exit1 + ":\n";
-						mc += "addi $t0, $t0, 1\n";
-
-						mc += "li $2, 9\n";
-						mc += "move $4, $t0\n";
-						mc += "syscall\n";
-
-						mc += "sw $2, " + lvalue + "\n";
-
-						mc += "add $t0, $zero, $zero\n";
-
-						string loop2 = "looplabel" + to_string(looplabel);
-						looplabel++;
-						string out = "looplabel" + to_string(looplabel);
-						looplabel++;
-
-						mc += "lw $16, " + rvalue + "\n"; 
-						mc += loop2 + ":\n";
-						mc += "add $t1, $16, $t0\n";
-						mc += "lb $t2, 0($t1)\n";
-						mc += "add $t3, $2, $t0\n";
-						mc += "sb $t2, 0($t3)\n";
-						mc += "addi $t0, $t0, 1\n";
-						mc += "beq $t2, $zero, " + out + "\n";
-						mc += "j " + loop2 + "\n";
-						mc += out + ":\n";
-						*/
 					}
 
 				}
@@ -1876,7 +2000,6 @@ int main(int argcount, char* arguments[])
 	myfile << mc;
 	cout << "Successfully generated machine code" << endl;
 	myfile.close();
-
 
 	return 0;
 }

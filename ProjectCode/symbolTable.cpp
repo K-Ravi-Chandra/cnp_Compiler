@@ -443,10 +443,16 @@ int insertParam( string structName, string functionName, string variableName, st
 					{
 						cout << levels[level] << endl;
 						vector<string> sizeLevels;
-						insertVariable(structName, functionName, levels[level], "int", sizeLevels);
+						//insertVariable(structName, functionName, levels[level], "int", sizeLevels);
 					}
+					(*ste).levels = levels;
 					globalTable[i].functions[j].parameters.push_back(*ste);
-					insertVariable( structName, functionName, variableName, dataType, levels);
+
+					for( int level = 0 ; level < levelCount ; level++ )
+					{
+						insertParam( structName, functionName, levels[level], "int", 0 );
+					}
+					//insertVariable( structName, functionName, variableName, dataType, levels);
 					return 1;
 				}
 			}
@@ -454,6 +460,73 @@ int insertParam( string structName, string functionName, string variableName, st
 		}
 	}
 	return - 1;
+}
+
+int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels, int b )
+{
+	for( int i = 0 ; i < globalTable.size() ; i++ )
+	{
+		if( globalTable[i].structName == structName )
+		{
+			vector<FunctionTable> table = globalTable[i].functions;
+			for( int j = 0 ; j < table.size() ; j++ )
+			{
+				if( table[j].functionName == functionName )
+				{
+					vector<SymbolTableEntry> param = table[j].table;
+					for( int k = 0 ; k < param.size() ; k++ )
+					{
+						if( param[k].name == variableName and param[k].scope == currentScope )
+						{
+							return -3;
+						} }
+					SymbolTableEntry* ste = new SymbolTableEntry();
+
+					(*ste).name = variableName;
+					(*ste).dataType = dataType;
+					(*ste).size = getSize(dataType);
+					(*ste).levels = levels;
+					(*ste).scope = b;
+					globalTable[i].functions[j].table.push_back(*ste);
+					return 1;
+				}
+			}
+			return -2;
+		}
+	}
+	return - 1;
+}
+
+void resolveArrays( string structName, string functionName )
+{
+	for( int i = 0 ; i < globalTable.size() ; i++ )
+	{
+		if( globalTable[i].structName == structName )
+		{
+			vector<FunctionTable> table = globalTable[i].functions;
+			for( int j = 0 ; j < table.size() ; j++ )
+			{
+				if( table[j].functionName == functionName )
+				{ 
+					for( int k = 0 ; k < table[j].parameters.size() ; k++ )
+					{
+						cout << "paramerters are ";
+						cout << table[j].parameters[k].name << endl;
+						insertVariable( structName, functionName, table[j].parameters[k].name, table[j].parameters[k].dataType, table[j].parameters[k].levels, table[j].parameters[k].scope);
+					}
+
+					for( int k = 0 ; k < table[j].parameters.size() ; k++ )
+					{
+						for( int l = 0 ; l < table[j].parameters[k].levels.size() ; l++ )
+						{
+							vector<string> le;
+							insertVariable( structName, functionName, table[j].parameters[k].levels[l], "int", le );
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 int insertVariable( string structName, string functionName, string variableName, string dataType, vector<string> levels )
@@ -503,8 +576,6 @@ int insertVariable( string structName, string functionName, string variableName,
 	return - 1;
 }
 
-/*
- */
 int insertFunction( string returnType, string functionName, int levelCount )
 {
 	return insertFunction( currentStruct,  returnType, functionName, levelCount );

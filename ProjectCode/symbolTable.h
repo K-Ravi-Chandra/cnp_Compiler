@@ -97,6 +97,7 @@ int getSize( string dataType );
 int getActualSize( string dataType );
 int getAttributeOffset( string structName, string attributeName );
 bool checkStruct( string structName );
+void resolveArrays( string structName, string functionName );
 
 
 

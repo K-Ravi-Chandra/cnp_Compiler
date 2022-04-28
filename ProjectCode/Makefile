@@ -1,4 +1,4 @@
-compile: analyzer.l parser.y tempToMachine.cpp
+compile: analyzer.l parser.y
 	lex analyzer.l
 	yacc -d parser.y 
 	yacc parser.y -o gm.cc
