@@ -106,13 +106,13 @@ for *n
 	return
 
 
-set return address.
-minus update
+set return address.		-completed
+minus update			-completed
 
-error handling
-array passing
-var assigning
+error handling	--completed
+array passing	-completed
+var assigning	-completed
 float
 deb package
 
-==b for two bool variables
+==b for two bool variables	-completed

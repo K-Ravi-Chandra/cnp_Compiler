@@ -445,8 +445,6 @@ int getArrayOffset( string s, int pars, int sizeno )
 			struct Var var ;
 			if(pars > 0 && pars <= no_params)
 			{
-				cout << "parameter---- name = " << params.find(parameters[pars-1])->second.name << endl;
-
 			}
 			else
 			{
@@ -878,7 +876,7 @@ int main(int argcount, char* arguments[])
 			}
 			if(d1 == 0) continue;
 
-			cout << s << endl;
+			//cout << s << endl;
 
 			mc += "\n#" + s + "\n";
 			if(tokens[0] == "funCall")
@@ -948,12 +946,7 @@ int main(int argcount, char* arguments[])
 			else if( tokens.size() == 3 and tokens[2] == "returnVal" )
 			{
 				int a = getStackAddrNo(tokens[0]);
-
-				cout << "a = " << a << endl;
-
 				int noOfLoads = getVariableSize(currentFunc, tokens[0])/4;
-
-				cout << "no of Loads = " << noOfLoads <<endl;
 
 				for( int i = 0 ; i < noOfLoads ; i++ )
 				{
@@ -977,11 +970,7 @@ int main(int argcount, char* arguments[])
 					int size = getVarSize(currentFunc);
 					size += 4;
 					//mc += "addiu $sp, $sp, " + to_string(size) + "\n";
-
-					cout << "b = " << b << endl;
 					int noOfLoads = getVariableSize(currentFunc, tokens[1])/4;
-					cout << "no of Loads = " << noOfLoads <<endl;
-
 					for( int i = 0 ; i < noOfLoads ; i++ )
 					{
 						mc += "lw $" + to_string(8+i) + " " + to_string(b+i*4) + "($sp)\n";
@@ -1636,13 +1625,7 @@ int main(int argcount, char* arguments[])
 				{
 					int a = getStackAddrNo(tokens[0]);
 					int b = getStackAddrNo(tokens[2]);
-
-					cout << "a = " << a << endl;
-					cout << "b = " << b << endl;
-
 					int noOfLoads = getVariableSize(currentFunc, tokens[0])/4;
-
-					cout << "no of Loads = " << noOfLoads <<endl;
 
 					for( int i = 0 ; i < noOfLoads ; i++ )
 					{
@@ -1998,7 +1981,7 @@ int main(int argcount, char* arguments[])
 
 	ofstream myfile("machine.asm");
 	myfile << mc;
-	cout << "Successfully generated machine code" << endl;
+	//cout << "Successfully generated machine code" << endl;
 	myfile.close();
 
 	return 0;

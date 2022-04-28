@@ -441,7 +441,6 @@ int insertParam( string structName, string functionName, string variableName, st
 
 					for( int level = 0 ; level < levels.size() ; level++ )
 					{
-						cout << levels[level] << endl;
 						vector<string> sizeLevels;
 						//insertVariable(structName, functionName, levels[level], "int", sizeLevels);
 					}
@@ -510,8 +509,6 @@ void resolveArrays( string structName, string functionName )
 				{ 
 					for( int k = 0 ; k < table[j].parameters.size() ; k++ )
 					{
-						cout << "paramerters are ";
-						cout << table[j].parameters[k].name << endl;
 						insertVariable( structName, functionName, table[j].parameters[k].name, table[j].parameters[k].dataType, table[j].parameters[k].levels, table[j].parameters[k].scope);
 					}
 

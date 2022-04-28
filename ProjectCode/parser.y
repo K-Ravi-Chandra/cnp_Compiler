@@ -25,8 +25,6 @@ extern "C"
 	void yyerror(const char* s)
 	{
 		printf("%s at line: %d\n", s, yylineno);
-		//printSymbolTable();
-		//cout << "temp code = " << TemporaryCode << endl;
 		return;
 	}
 	int yywrap()
@@ -71,9 +69,8 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
 						cout << "At line : " << yylineno << endl;
-						cout << TemporaryCode << endl;
-						printSymbolTable();
-						return -1;
+						$<var.type>$ = getCharArray("UNKNOWN TYPE");
+						$<var.addr>$ = getCharArray("UNKNOWN VARIABLE");
 					}
 					else if( ste.name.substr(0, 4) == "this" )
 					{
@@ -283,152 +280,149 @@ extern "C"
 					if( $<array.completed>1 == 1 )
 					{
 						cout << "COMPILETIME ERROR: Cannot index a non-array type" << endl;
-
 						cout << "At line : " << yylineno << endl;
-						cout << TemporaryCode << endl;
-						printSymbolTable();
-						return -1;
 					}
-					if( string($<var.type>3) != "int" )
+					else if( string($<var.type>3) != "int" )
 					{
 						cout << "COMPILETIME ERROR: Cannot use a non integer as index" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
-					}
-
-					string addr($<array.addr>1);
-					string origname = "";
-					for( int i = 0 ; i < addr.size() ; i++ )
-					{
-						if( addr[i] != '_' )
-						{
-							origname += addr[i];
-						}
-						else if( addr[i] == '.' )
-						{
-							origname = "";
-						}
-						else
-						{
-							break;
-						}
-					}
-					SymbolTableEntry ste = getVariable(origname);
-
-					if( $<array.completed>1 == 2 )
-					{
-						string temp(getTemp("int"));
-						appendCode(temp + " =i len " + string($<array.addr>$));
-
-						string label1 = getLabel();
-						string label2 = getLabel();
-
-						appendCode("if ( " + string($<var.addr>3) + " <i " + temp + " ) goto " +  label1);
-						string strconst = getStringConst();
-						string var(getTemp("int"));
-						appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
-						appendCode("print string " + var);
-						appendCode("exit");
-						appendCode(label1 + ":");
-						appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
-
-						strconst = getStringConst();
-						var = (getTemp("int"));
-						appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
-						appendCode("print string " + var);
-
-						appendCode("exit");
-						appendCode(label2 + ":");
-
-						temp = string(getTemp("int"));
-
-						appendCode(temp + " =i " + string($<array.addr>1) + " +i " + string($<var.addr>3));
-
-						$<array.addr>$ = getCharArray("*" + temp);
-						$<array.type>$ = getCharArray("char");
-						$<array.completed>$ = 1;
-					}
-					else if( $<array.level>1 ==  ste.levels.size()-1 )
-					{
-						string label1 = getLabel();
-						string label2 = getLabel();
-
-						appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + "_" + to_string(ste.scope) + " ) goto " +  label1);
-						string strconst = getStringConst();
-						string var(getTemp("int"));
-						appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
-						appendCode("print string " + var);
-						appendCode("exit");
-						appendCode(label1 + ":");
-						appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
-
-						strconst = getStringConst();
-						var = (getTemp("int"));
-						appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
-						appendCode("print string " + var);
-
-						appendCode("exit");
-						appendCode(label2 + ":");
-
-						string temp(getTemp("int"));
-
-						appendCode(temp + " =i " + string($<var.addr>3) + " *i #" + to_string(getActualSize(ste.dataType)));
-
-						appendCode(temp + " =i " + string($<array.index>1) + " +i " + temp);
-
-						$<array.addr>$ = getCharArray("*" + temp);
-						$<array.type>$ = $<array.type>1;
-						$<array.completed>$ = 1;
-
-						if( string($<array.type>$) == "string" )
-						{
-							$<array.completed>$ = 2;
-						}
 					}
 					else
 					{
-						string label1 = getLabel();
-						string label2 = getLabel();
-						appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + "_" + to_string(ste.scope) + " ) goto " +  label1);
-						string strconst = getStringConst();
-						string var(getTemp("int"));
-						appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
-						appendCode("print string " + var);
-						appendCode("exit");
-						appendCode(label1 + ":");
-						appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
-
-						strconst = getStringConst();
-						var = (getTemp("int"));
-						appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
-						appendCode("print string " + var);
-
-						appendCode("exit");
-						appendCode(label2 + ":");
-
-						$<array.index>$ = getTemp("int");
-						string temp($<array.index>$);
-
-						appendCode(temp + " =i #1");
-
-						for( int i = $<array.level>1 + 1; i < ste.levels.size() ; i++ )
+						string addr($<array.addr>1);
+						string origname = "";
+						for( int i = 0 ; i < addr.size() ; i++ )
 						{
-							appendCode(temp + " =i " + temp + " *i " + ste.levels[i] + "_" + to_string(ste.scope));
+							if( addr[i] != '_' )
+							{
+								origname += addr[i];
+							}
+							else if( addr[i] == '.' )
+							{
+								origname = "";
+							}
+							else
+							{
+								break;
+							}
 						}
+						SymbolTableEntry ste = getVariable(origname);
 
-						appendCode(temp + " =i " + temp + " *i #" + to_string(getActualSize(ste.dataType)));
+						if( $<array.completed>1 == 2 )
+						{
+							string temp(getTemp("int"));
+							appendCode(temp + " =i len " + string($<array.addr>$));
 
-						appendCode(temp + " =i " + string($<var.addr>3) + " *i " + temp );
-						appendCode(temp + " =i " + temp + " +i " + string($<array.index>1));
+							string label1 = getLabel();
+							string label2 = getLabel();
 
-						$<array.addr>$ = $<array.addr>1;
-						$<array.completed>$ = 0;
-						$<array.level>$ = $<array.level>1 + 1;
-						$<array.type>$ = $<array.type>1;
-					}
-					if( parseDebug == 1 )
-					{
-						cout << "postfix_expression -> postfix_expression [ expression ]" << endl;
+							appendCode("if ( " + string($<var.addr>3) + " <i " + temp + " ) goto " +  label1);
+							string strconst = getStringConst();
+							string var(getTemp("int"));
+							appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
+							appendCode("print string " + var);
+							appendCode("exit");
+							appendCode(label1 + ":");
+							appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
+
+							strconst = getStringConst();
+							var = (getTemp("int"));
+							appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
+							appendCode("print string " + var);
+
+							appendCode("exit");
+							appendCode(label2 + ":");
+
+							temp = string(getTemp("int"));
+
+							appendCode(temp + " =i " + string($<array.addr>1) + " +i " + string($<var.addr>3));
+
+							$<array.addr>$ = getCharArray("*" + temp);
+							$<array.type>$ = getCharArray("char");
+							$<array.completed>$ = 1;
+						}
+						else if( $<array.level>1 ==  ste.levels.size()-1 )
+						{
+							string label1 = getLabel();
+							string label2 = getLabel();
+
+							appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + "_" + to_string(ste.scope) + " ) goto " +  label1);
+							string strconst = getStringConst();
+							string var(getTemp("int"));
+							appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
+							appendCode("print string " + var);
+							appendCode("exit");
+							appendCode(label1 + ":");
+							appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
+
+							strconst = getStringConst();
+							var = (getTemp("int"));
+							appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
+							appendCode("print string " + var);
+
+							appendCode("exit");
+							appendCode(label2 + ":");
+
+							string temp(getTemp("int"));
+
+							appendCode(temp + " =i " + string($<var.addr>3) + " *i #" + to_string(getActualSize(ste.dataType)));
+
+							appendCode(temp + " =i " + string($<array.index>1) + " +i " + temp);
+
+							$<array.addr>$ = getCharArray("*" + temp);
+							$<array.type>$ = $<array.type>1;
+							$<array.completed>$ = 1;
+
+							if( string($<array.type>$) == "string" )
+							{
+								$<array.completed>$ = 2;
+							}
+						}
+						else
+						{
+							string label1 = getLabel();
+							string label2 = getLabel();
+							appendCode("if ( " + string($<var.addr>3) + " <i " + ste.levels[$<array.level>1] + "_" + to_string(ste.scope) + " ) goto " +  label1);
+							string strconst = getStringConst();
+							string var(getTemp("int"));
+							appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index out of Bounds\\n\"");
+							appendCode("print string " + var);
+							appendCode("exit");
+							appendCode(label1 + ":");
+							appendCode("if ( " + string($<var.addr>3) + " >=i #0 ) goto " + label2);
+
+							strconst = getStringConst();
+							var = (getTemp("int"));
+							appendCode("strconst " + strconst + " " + var + " #" + "\"RUNTIME ERROR: Index is negative\\n\"");
+							appendCode("print string " + var);
+
+							appendCode("exit");
+							appendCode(label2 + ":");
+
+							$<array.index>$ = getTemp("int");
+							string temp($<array.index>$);
+
+							appendCode(temp + " =i #1");
+
+							for( int i = $<array.level>1 + 1; i < ste.levels.size() ; i++ )
+							{
+								appendCode(temp + " =i " + temp + " *i " + ste.levels[i] + "_" + to_string(ste.scope));
+							}
+
+							appendCode(temp + " =i " + temp + " *i #" + to_string(getActualSize(ste.dataType)));
+
+							appendCode(temp + " =i " + string($<var.addr>3) + " *i " + temp );
+							appendCode(temp + " =i " + temp + " +i " + string($<array.index>1));
+
+							$<array.addr>$ = $<array.addr>1;
+							$<array.completed>$ = 0;
+							$<array.level>$ = $<array.level>1 + 1;
+							$<array.type>$ = $<array.type>1;
+						}
+						if( parseDebug == 1 )
+						{
+							cout << "postfix_expression -> postfix_expression [ expression ]" << endl;
+						}
 					}
 				}
 
@@ -440,26 +434,25 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: cannot apply increment operator to non int types" << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
 						}
-						if( string($<array.addr>$)[0] == '_' )
+						else if( string($<array.addr>$)[0] == '_' )
 						{
 							cout << "COMPILETIME ERROR: lvalue is required as increment operand" << endl;
 							cout << "At line: " << yylineno << endl;
-							return -1;
 						}
-
-						$<array.addr>$ = getTemp("int");
-						appendCode(string($<array.addr>$) + " =i " + string($<array.addr>1));
-						appendCode(string($<array.addr>1) + " =i " + string($<array.addr>1) + " +i " + "#1");
-						$<array.type>$ = $<var.type>1;
-						$<array.completed>$ = $<array.completed>1;
+						else
+						{
+							$<array.addr>$ = getTemp("int");
+							appendCode(string($<array.addr>$) + " =i " + string($<array.addr>1));
+							appendCode(string($<array.addr>1) + " =i " + string($<array.addr>1) + " +i " + "#1");
+							$<array.type>$ = $<var.type>1;
+							$<array.completed>$ = $<array.completed>1;
+						}
 					}
 					else
 					{
 						cout << "COMPILETIME ERROR: cannot apply increment operator to non int types" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 
 					if( parseDebug == 1 )
@@ -476,25 +469,25 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: cannot apply decrement operator to non int types" << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
 						}
-						if( string($<array.addr>$)[0] == '_' )
+						else if( string($<array.addr>$)[0] == '_' )
 						{
 							cout << "COMPILETIME ERROR: lvalue is required as decrement operand" << endl;
 							cout << "At line: " << yylineno << endl;
-							return -1;
 						}
-						$<array.addr>$ = getTemp("int");
-						appendCode(string($<array.addr>$) + " =i " + string($<array.addr>1));
-						appendCode(string($<array.addr>1) + " =i " + string($<array.addr>1) + " -i " + "#1");
-						$<array.type>$ = $<var.type>1;
-						$<array.completed>$ = $<array.completed>1;
+						else
+						{
+							$<array.addr>$ = getTemp("int");
+							appendCode(string($<array.addr>$) + " =i " + string($<array.addr>1));
+							appendCode(string($<array.addr>1) + " =i " + string($<array.addr>1) + " -i " + "#1");
+							$<array.type>$ = $<var.type>1;
+							$<array.completed>$ = $<array.completed>1;
+						}
 					}
 					else
 					{
 						cout << "COMPILETIME ERROR: cannot apply decrement operator to non int types" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					if( parseDebug == 1 )
 					{
@@ -510,22 +503,21 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: type " << string($<array.type>1) << " doesn't have an attribute " << string($<str>3) << endl;
 						cout << "At line : " << yylineno << endl;
-						printSymbolTable();
-						cout << TemporaryCode << endl;
-						return -1;
 					}
+					else
+					{
+						string temp1(getTemp("int"));
+						appendCode("la " + temp1 + " " + string($<array.addr>1));
 
-					string temp1(getTemp("int"));
-					appendCode("la " + temp1 + " " + string($<array.addr>1));
+						string temp2(getTemp("int"));
+						appendCode(temp2 + " =i #" + to_string(getAttributeOffset(string($<array.type>1), string($<str>3))));
 
-					string temp2(getTemp("int"));
-					appendCode(temp2 + " =i #" + to_string(getAttributeOffset(string($<array.type>1), string($<str>3))));
+						appendCode(temp2 + " =i " + temp2 + " +i " + temp1);
 
-					appendCode(temp2 + " =i " + temp2 + " +i " + temp1);
-
-					$<array.type>$ = getCharArray(ste.dataType);
-					$<array.addr>$ = getCharArray("*" + temp2);
-					$<array.completed>$ = 1;
+						$<array.type>$ = getCharArray(ste.dataType);
+						$<array.addr>$ = getCharArray("*" + temp2);
+						$<array.completed>$ = 1;
+					}
 				}
 
 			| postfix_expression '.' IDENTIFIER '('
@@ -536,18 +528,19 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Type " << string($<array.type>1) << " doesn't have a method " << string($<str>3) << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
+					else
+					{
+						appendCode("funCall " + string($<array.type>1) + "." + string($<str>3));
 
-					appendCode("funCall " + string($<array.type>1) + "." + string($<str>3));
+						setCallStack(string($<array.type>1), string($<str>3));
 
-					setCallStack(string($<array.type>1), string($<str>3));
+						string temp(getTemp("int"));
+						appendCode("la " + temp + " " + string($<array.addr>1));
+						appendCode("param " + temp + " 4");
 
-					string temp(getTemp("int"));
-					appendCode("la " + temp + " " + string($<array.addr>1));
-					appendCode("param " + temp + " 4");
-
-					callStack.pop();
+						callStack.pop();
+					}
 				}
 
 			functionCall		
@@ -558,16 +551,17 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Too few arguments for the function " << string($<array.type>1) << "." << string($<str>3) << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
+					else
+					{
+						appendCode("call " + getFunctionLabel(string($<array.type>1), string($<str>3)));
 
-					appendCode("call " + getFunctionLabel(string($<array.type>1), string($<str>3)));
+						$<array.completed>$ = 1;
+						$<array.type>$ = getCharArray(ste.dataType);
+						$<array.addr>$ = getTemp(ste.dataType);
 
-					$<array.completed>$ = 1;
-					$<array.type>$ = getCharArray(ste.dataType);
-					$<array.addr>$ = getTemp(ste.dataType);
-
-					appendCode(string($<array.addr>$) + " = returnVal");
+						appendCode(string($<array.addr>$) + " = returnVal");
+					}
 
 					if( parseDebug == 1 )
 					{
@@ -583,19 +577,19 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
 						cout << "At line : " << yylineno << endl;
-						printSymbolTable();
-						cout << TemporaryCode << endl;
-						return 1;
 					}
-					appendCode("funCall " + currentStruct + "." + string($<str>1));
-					setCallStack(currentStruct, string($<str>1));
-
-					if( currentStruct != "main" )
+					else
 					{
-						string temp(getTemp("int"));
-						appendCode("la " + temp + " this_" + to_string(callStack.top().scope));
-						appendCode("param " + temp + " 4");
-						callStack.pop();
+						appendCode("funCall " + currentStruct + "." + string($<str>1));
+						setCallStack(currentStruct, string($<str>1));
+
+						if( currentStruct != "main" )
+						{
+							string temp(getTemp("int"));
+							appendCode("la " + temp + " this_" + to_string(callStack.top().scope));
+							appendCode("param " + temp + " 4");
+							callStack.pop();
+						}
 					}
 				}
 
@@ -607,16 +601,17 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Too few arguments for the function " << string($<str>1) << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
+					else
+					{
+						appendCode("call " + getFunctionLabel(currentStruct, string($<str>1)));
 
-					appendCode("call " + getFunctionLabel(currentStruct, string($<str>1)));
+						$<array.completed>$ = 1;
+						$<array.type>$ = getCharArray(ste.dataType);
+						$<array.addr>$ =  getTemp(ste.dataType);
 
-					$<array.completed>$ = 1;
-					$<array.type>$ = getCharArray(ste.dataType);
-					$<array.addr>$ =  getTemp(ste.dataType);
-					
-					appendCode(string($<array.addr>$) + " = returnVal");
+						appendCode(string($<array.addr>$) + " = returnVal");
+					}
 
 					if( parseDebug == 1 )
 					{
@@ -651,12 +646,9 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Too many arguments" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					else if( string($<var.type>1).substr(0, 5) == "array" )
 					{
-						cout << "this is an array" << endl;
-						
 						string addr($<var.addr>1);
 						string origname = "";
 						for( int i = 0 ; i < addr.size() ; i++ )
@@ -676,30 +668,29 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
 							cout << "Given parameter is of type '" << ste.dataType << "', required parameter is of type '" << callStack.top().dataType << "'" << endl;
-							return -1;
 						}
-						if( callStack.top().levels.size() != ste.levels.size() )
+						else if( callStack.top().levels.size() != ste.levels.size() )
 						{
 							cout << "COMPILETIME ERROR: Incorrect dimensions for the array" << endl;
 							cout << "Required array has dimensions " << callStack.top().levels.size() << ", given array has dimensions " << ste.levels.size() << endl;
-							return -1;
 						}
-						
-						appendCode("param " + string($<var.addr>1) + " " + to_string(callStack.top().size));
-						for( int i = 0 ; i < callStack.top().levels.size() ; i++ )
+						else
 						{
-							string c = ste.levels[i] + "_" + to_string(ste.scope);
-							appendCode("param " + c + " " + to_string(callStack.top().size));
+							appendCode("param " + string($<var.addr>1) + " " + to_string(callStack.top().size));
+							for( int i = 0 ; i < callStack.top().levels.size() ; i++ )
+							{
+								string c = ste.levels[i] + "_" + to_string(ste.scope);
+								appendCode("param " + c + " " + to_string(callStack.top().size));
+								callStack.pop();
+							}
 							callStack.pop();
 						}
-						callStack.pop();
 					}
 					else if( ((string($<var.type>1) != callStack.top().dataType) and ((string($<var.type>1)[0] == '*' and callStack.top().dataType != "int") or (string($<var.type>1) == "int" and callStack.top().dataType[0] != '*') )))
 					{
 						cout << "COMPILETIME ERROR: Incorrect fffffffunction parameters type" << endl;
 						cout << "Given parameter is of type '" << string($<var.type>1) << "', required parameter is of type '" << callStack.top().dataType << "'" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					else
 					{
@@ -720,7 +711,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Too many arguments" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					else if( string($<var.type>3).substr(0, 5) == "array" )
 					{
@@ -739,29 +729,28 @@ extern "C"
 						}
 						SymbolTableEntry ste = getVariable(origname);
 
-						cout << ste.name << endl;
 						if( callStack.top().dataType != ste.dataType )
 						{
 							cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
 							cout << "Given parameter is of type '" << ste.dataType << "', required parameter is of type '" << callStack.top().dataType << "'" << endl;
-							return -1;
 						}
-						if( callStack.top().levels.size() != ste.levels.size() )
+						else if( callStack.top().levels.size() != ste.levels.size() )
 						{
 							cout << "COMPILETIME ERROR: Incorrect dimensions for the array" << endl;
 							cout << "Required array has dimensions " << callStack.top().levels.size() << ", given array has dimensions " << ste.levels.size() << endl;
-							return -1;
 						}
-						appendCode("param " + string($<var.addr>3) + " " + to_string(callStack.top().size));
-
-						callStack.pop();
+						else
+						{
+							appendCode("param " + string($<var.addr>3) + " " + to_string(callStack.top().size));
+							callStack.pop();
+						}
 					}
+
 					else if( ((string($<var.type>3) != callStack.top().dataType) and ((string($<var.type>3)[0] == '*' and callStack.top().dataType != "int") or (string($<var.type>1) == "int" and callStack.top().dataType[0] != '*') )))
 					{
 						cout << "COMPILETIME ERROR: Incorrect function parameters type" << endl;
 						cout << "Given parameter is of type " << string($<var.type>3) << ", required parameter is of type " << callStack.top().dataType << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					else
 					{
@@ -789,9 +778,6 @@ extern "C"
 					{
 						$<var.addr>$ = $<array.addr>1;
 						$<var.type>$ = getCharArray("array " + string($<array.type>1));
-						//cout << "COMPILETIME ERROR: referencing an array pointer" << endl;
-						//cout << "At line : " << yylineno << endl;
-						//return 1;
 					}
 
 					if( parseDebug == 1 )
@@ -808,20 +794,26 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply decrement operator to non int types" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						
+						$<var.addr>$ = getTemp("int");
+						$<var.type>$ = $<var.type>2;
 					}
-					if( string($<var.addr>2)[0] == '_' )
+					else if( string($<var.addr>2)[0] == '_' )
 					{
 						cout << "COMPILETIME ERROR: lvalue is required as increment operand" << endl;
 						cout << "At line: " << yylineno << endl;
-						return -1;
-					}
 
-					$<var.addr>$ = getTemp("int");
-					$<var.type>$ = $<var.type>2;
-					
-					appendCode(string($<var.addr>2) + " =i " + string($<var.addr>2) + " +i " + "#1");
-					appendCode(string($<var.addr>$) + " =i " + string($<var.addr>2));
+						$<var.addr>$ = getTemp("int");
+						$<var.type>$ = $<var.type>2;
+					}
+					else
+					{
+						$<var.addr>$ = getTemp("int");
+						$<var.type>$ = $<var.type>2;
+
+						appendCode(string($<var.addr>2) + " =i " + string($<var.addr>2) + " +i " + "#1");
+						appendCode(string($<var.addr>$) + " =i " + string($<var.addr>2));
+					}
 
 					if( parseDebug == 1 )
 					{
@@ -837,21 +829,26 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply decrement operator to non int types" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+
+						$<var.addr>$ = getTemp("int");
+						$<var.type>$ = $<var.type>2;
 					}
-					
-					if( string($<var.addr>$)[0] == '_' )
+					else if( string($<var.addr>$)[0] == '_' )
 					{
 						cout << "COMPILETIME ERROR: lvalue is required as decrement operand" << endl;
 						cout << "At line: " << yylineno << endl;
-						return -1;
+						
+						$<var.addr>$ = getTemp("int");
+						$<var.type>$ = $<var.type>2;
 					}
-					
-					$<var.addr>$ = getTemp("int");
-					$<var.type>$ = $<var.type>2;
-					
-					appendCode(string($<var.addr>2) + " =i " + string($<var.addr>2) + " -i " + "#1");
-					appendCode(string($<var.addr>$) + " =i " + string($<var.addr>2));
+					else
+					{
+						$<var.addr>$ = getTemp("int");
+						$<var.type>$ = $<var.type>2;
+
+						appendCode(string($<var.addr>2) + " =i " + string($<var.addr>2) + " -i " + "#1");
+						appendCode(string($<var.addr>$) + " =i " + string($<var.addr>2));
+					}
 					
 					if( parseDebug == 1 )
 					{
@@ -873,7 +870,7 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: cannot apply + to non number types" << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
+							$<var.addr>$ = $<var.addr>2;
 						}
 						else
 						{
@@ -898,7 +895,7 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: cannot apply '!' to non bool types" << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
+							$<var.type>$ = $<var.type>2;
 						}
 						else
 						{
@@ -912,7 +909,8 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: cannot apply * to non-pointer type" << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
+							$<var.type>$ = getCharArray("int");
+							$<var.addr>$ = $<var.addr>2;
 						}
 						else
 						{
@@ -945,15 +943,19 @@ extern "C"
 					SymbolTableEntry ste = getVariable(string($<str>3) );
 					if( ste.name == "" )
 					{
-						cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
+						cout << "COMPILETIME ERROR: " << string($<str>3) << " not declared" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						
+						$<var.type>$ = getCharArray("int");
+						$<var.addr>$ = getTemp("int");
 					}
-					
-					$<var.type>$ = getCharArray("int");
-					$<var.addr>$ = getTemp("int");
+					else
+					{
+						$<var.type>$ = getCharArray("int");
+						$<var.addr>$ = getTemp("int");
 
-					appendCode(string($<var.addr>$) + " =i len " + ste.name + "_" + to_string(ste.scope));
+						appendCode(string($<var.addr>$) + " =i len " + ste.name + "_" + to_string(ste.scope));
+					}
 					
 					if( parseDebug == 1 )
 					{	
@@ -971,13 +973,17 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: " << string($<str>1) << " not declared" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+
+						$<var.type>$ = getCharArray("int");
+						$<var.addr>$ = getTemp("int");
 					}
+					else
+					{
+						$<var.type>$ = getCharArray("int");
+						$<var.addr>$ = getTemp("int");
 
-					$<var.type>$ = getCharArray("int");
-					$<var.addr>$ = getTemp("int");
-
-					appendCode(string($<var.addr>$) + " =i #" + to_string(getActualSize(ste.dataType)));
+						appendCode(string($<var.addr>$) + " =i #" + to_string(getActualSize(ste.dataType)));
+					}
 					
 					if( parseDebug == 1 )
 					{	
@@ -993,14 +999,17 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Type " << dtype << " is not defined" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
-
+						
+						$<var.type>$ = getCharArray("int");
+						$<var.addr>$ = getTemp("int");
 					}
-					
-					$<var.type>$ = getCharArray("int");
-					$<var.addr>$ = getTemp("int");
+					else
+					{
+						$<var.type>$ = getCharArray("int");
+						$<var.addr>$ = getTemp("int");
 
-					appendCode(string($<var.addr>$) + " =i #" + to_string(getActualSize(dtype)));
+						appendCode(string($<var.addr>$) + " =i #" + to_string(getActualSize(dtype)));
+					}
 					
 					if( parseDebug == 1 )
 					{	
@@ -1016,13 +1025,16 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Argument to malloc must be an integer" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						$<var.type>$ = getCharArray("int");
+						$<var.addr>$ = getTemp("int");
 					}
+					else
+					{
+						$<var.type>$ = getCharArray("int");
+						$<var.addr>$ = getTemp("int");
 
-					$<var.type>$ = getCharArray("int");
-					$<var.addr>$ = getTemp("int");
-					
-					appendCode(string($<var.addr>$) + " =i malloc " + string($<var.addr>3));
+						appendCode(string($<var.addr>$) + " =i malloc " + string($<var.addr>3));
+					}
 					
 					if( parseDebug == 1 )
 					{	
@@ -1072,7 +1084,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Type " << dtype << " is not defined" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 				}
 			;
@@ -1152,7 +1163,8 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '*' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						$<var.addr>$ = $<var.type>1;
+						$<var.type>$ = $<var.type>1;
 					}
 					else
 					{
@@ -1202,7 +1214,8 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '/' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						$<var.addr>$ = $<var.type>1;
+						$<var.type>$ = $<var.type>1;
 					}
 					else
 					{
@@ -1253,7 +1266,8 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '\%' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						$<var.addr>$ = $<var.type>1;
+						$<var.type>$ = $<var.type>1;
 					}
 					else
 					{
@@ -1344,7 +1358,8 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '+' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						$<var.addr>$ = $<var.type>1;
+						$<var.type>$ = $<var.type>1;
 					}
 
 					if( parseDebug == 1 )
@@ -1392,7 +1407,8 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '-' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						$<var.addr>$ = $<var.type>1;
+						$<var.type>$ = $<var.type>1;
 					}
 
 					if( parseDebug == 1 )
@@ -1427,29 +1443,32 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '<' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
-					}
-					
-					$<var.type>$ = getCharArray("bool");
-
-					$<var.addr>$ = getTemp("bool");
-					string label1 = getLabel();
-					string label2 = getLabel();
-
-					if( type1 == "int" and type2 == "int" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " <i " + string($<var.addr>3) + " ) goto " + string(label1));
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
 					}
 					else
 					{
-						appendCode("if ( " + string($<var.addr>1) + " <f " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
+						$<var.type>$ = getCharArray("bool");
 
-					appendCode(string($<var.addr>$) + " =b #false");
-					appendCode("goto " + string(label2));
-					appendCode(string(label1) + ":");
-					appendCode(string($<var.addr>$) + " =b #true");
-					appendCode(string(label2) + ":");	
+						$<var.addr>$ = getTemp("bool");
+						string label1 = getLabel();
+						string label2 = getLabel();
+
+						if( type1 == "int" and type2 == "int" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " <i " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else
+						{
+							appendCode("if ( " + string($<var.addr>1) + " <f " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+
+						appendCode(string($<var.addr>$) + " =b #false");
+						appendCode("goto " + string(label2));
+						appendCode(string(label1) + ":");
+						appendCode(string($<var.addr>$) + " =b #true");
+						appendCode(string(label2) + ":");	
+					}
 
 					if( parseDebug == 1 )
 					{
@@ -1469,28 +1488,31 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '>' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
-					}
-
-					$<var.type>$ = getCharArray("bool");
-					$<var.addr>$ = getTemp("bool");
-
-					string label1 = getLabel();
-					string label2 = getLabel();
-					if( type1 == "int" and type2 == "int" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " >i " + string($<var.addr>3) + " ) goto " + string(label1));
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
 					}
 					else
 					{
-						appendCode("if ( " + string($<var.addr>1) + " >f " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
 
-					appendCode(string($<var.addr>$) + " =b #false");
-					appendCode("goto " + string(label2));
-					appendCode(string(label1) + ":");
-					appendCode(string($<var.addr>$) + " =b #true");
-					appendCode(string(label2) + ":");	
+						string label1 = getLabel();
+						string label2 = getLabel();
+						if( type1 == "int" and type2 == "int" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " >i " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else
+						{
+							appendCode("if ( " + string($<var.addr>1) + " >f " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+
+						appendCode(string($<var.addr>$) + " =b #false");
+						appendCode("goto " + string(label2));
+						appendCode(string(label1) + ":");
+						appendCode(string($<var.addr>$) + " =b #true");
+						appendCode(string(label2) + ":");	
+					}
 
 					if( parseDebug == 1 )
 					{
@@ -1509,28 +1531,31 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '<=' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
-					}
-					
-					$<var.type>$ = getCharArray("bool");
-					$<var.addr>$ = getTemp("bool");
-					
-					string label1 = getLabel();
-					string label2 = getLabel();
-					if( type1 == "int" and type2 == "int" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " <=i " + string($<var.addr>3) + " ) goto " + string(label1));
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
 					}
 					else
 					{
-						appendCode("if ( " + string($<var.addr>1) + " <=f " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
 
-					appendCode(string($<var.addr>$) + " =b #false");
-					appendCode("goto " + string(label2));
-					appendCode(string(label1) + ":");
-					appendCode(string($<var.addr>$) + " =b #true");
-					appendCode(string(label2) + ":");	
+						string label1 = getLabel();
+						string label2 = getLabel();
+						if( type1 == "int" and type2 == "int" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " <=i " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else
+						{
+							appendCode("if ( " + string($<var.addr>1) + " <=f " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+
+						appendCode(string($<var.addr>$) + " =b #false");
+						appendCode("goto " + string(label2));
+						appendCode(string(label1) + ":");
+						appendCode(string($<var.addr>$) + " =b #true");
+						appendCode(string(label2) + ":");	
+					}
 
 					if( parseDebug == 1 )
 					{
@@ -1549,29 +1574,31 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '>=' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
-					}
-					
-					$<var.type>$ = getCharArray("bool");
-					$<var.addr>$ = getTemp("bool");
-					
-					string label1 = getLabel();
-					string label2 = getLabel();
-					if( type1 == "int" and type2 == "int" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " >=i " + string($<var.addr>3) + " ) goto " + string(label1));
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
 					}
 					else
 					{
-						appendCode("if ( " + string($<var.addr>1) + " >=f " + string($<var.addr>3) + " ) goto " + string(label1));
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
+
+						string label1 = getLabel();
+						string label2 = getLabel();
+						if( type1 == "int" and type2 == "int" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " >=i " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else
+						{
+							appendCode("if ( " + string($<var.addr>1) + " >=f " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+
+						appendCode(string($<var.addr>$) + " =b #false");
+						appendCode("goto " + string(label2));
+						appendCode(string(label1) + ":");
+						appendCode(string($<var.addr>$) + " =b #true");
+						appendCode(string(label2) + ":");	
 					}
-
-					appendCode(string($<var.addr>$) + " =b #false");
-					appendCode("goto " + string(label2));
-					appendCode(string(label1) + ":");
-					appendCode(string($<var.addr>$) + " =b #true");
-					appendCode(string(label2) + ":");	
-
 					if( parseDebug == 1 )
 					{
 						cout << "rel_expr -> rel_expr >= additive" << endl;
@@ -1604,45 +1631,47 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '==' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
 					}
+					else
+					{
+						$<var.type>$ = getCharArray("bool");
 
-					$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
+						string label1 = getLabel();
+						string label2 = getLabel();
+						if( type1 == "int" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " ==i " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1 == "float" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " ==f " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1 == "char" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " ==c " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1 == "bool" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " ==b " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1 == "string" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " ==s " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1[0] == '*' )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " ==i " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
 
-					$<var.addr>$ = getTemp("bool");
-					string label1 = getLabel();
-					string label2 = getLabel();
-					if( type1 == "int" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " ==i " + string($<var.addr>3) + " ) goto " + string(label1));
+						appendCode(string($<var.addr>$) + " =b #false");
+						appendCode("goto " + string(label2));
+						appendCode(string(label1) + ":");
+						appendCode(string($<var.addr>$) + " =b #true");
+						appendCode(string(label2) + ":");	
 					}
-					else if( type1 == "float" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " ==f " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1 == "char" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " ==c " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1 == "bool" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " ==b " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1 == "string" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " ==s " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1[0] == '*' )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " ==i " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-
-					appendCode(string($<var.addr>$) + " =b #false");
-					appendCode("goto " + string(label2));
-					appendCode(string(label1) + ":");
-					appendCode(string($<var.addr>$) + " =b #true");
-					appendCode(string(label2) + ":");	
-
 					if( parseDebug == 1 )
 					{
 						cout << "eq_expr -> eq_expr == rel_expr" << endl;
@@ -1660,44 +1689,50 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '!=' to arguements of types: " << type1 << ", " << type2 << endl;
 						cout << "At line : " << yylineno << endl;
+						
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
+						
 						return -1;
 					}
+					else
+					{
+						$<var.type>$ = getCharArray("bool");
+						$<var.addr>$ = getTemp("bool");
 
-					$<var.type>$ = getCharArray("bool");
-					$<var.addr>$ = getTemp("bool");
-					
-					string label1 = getLabel();
-					string label2 = getLabel();
-					if( type1 == "int" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " !=i " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1 == "float" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " !=f " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1 == "char" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " !=c " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1 == "bool" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " !=b " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1 == "string" )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " !=s " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
-					else if( type1[0] == '*' )
-					{
-						appendCode("if ( " + string($<var.addr>1) + " !=i " + string($<var.addr>3) + " ) goto " + string(label1));
-					}
+						string label1 = getLabel();
+						string label2 = getLabel();
+						if( type1 == "int" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " !=i " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1 == "float" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " !=f " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1 == "char" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " !=c " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1 == "bool" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " !=b " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1 == "string" )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " !=s " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
+						else if( type1[0] == '*' )
+						{
+							appendCode("if ( " + string($<var.addr>1) + " !=i " + string($<var.addr>3) + " ) goto " + string(label1));
+						}
 
-					appendCode(string($<var.addr>$) + " =b #false");
-					appendCode("goto " + string(label2));
-					appendCode(string(label1) + ":");
-					appendCode(string($<var.addr>$) + " =b #true");
-					appendCode(string(label2) + ":");	
+						appendCode(string($<var.addr>$) + " =b #false");
+						appendCode("goto " + string(label2));
+						appendCode(string(label1) + ":");
+						appendCode(string($<var.addr>$) + " =b #true");
+						appendCode(string(label2) + ":");	
+					}
 
 					if( parseDebug == 1 )
 					{
@@ -1728,21 +1763,25 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '&&' to non-boolean operands" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						
+						$<var.addr>$ = getTemp("bool");
+						$<var.type>$ = $<var.type>1;
 					}
+					else
+					{
+						$<var.addr>$ = getTemp("bool");
+						$<var.type>$ = $<var.type>1;
 
-					$<var.addr>$ = getTemp("bool");
-					$<var.type>$ = $<var.type>1;
-
-					char* label1 = getLabel();
-					appendCode("if ( " + string($<var.addr>1) + " ==b #false ) goto " + string(label1));
-					appendCode("if ( " + string($<var.addr>3) + " ==b #false ) goto " + string(label1));
-					appendCode(string($<var.addr>$) + " =b #true");
-					char* label2 = getLabel();
-					appendCode("goto " + string(label2));
-					appendCode(string(label1) + ":");
-					appendCode(string($<var.addr>$) + " =b #false");
-					appendCode(string(label2) + ":");
+						char* label1 = getLabel();
+						appendCode("if ( " + string($<var.addr>1) + " ==b #false ) goto " + string(label1));
+						appendCode("if ( " + string($<var.addr>3) + " ==b #false ) goto " + string(label1));
+						appendCode(string($<var.addr>$) + " =b #true");
+						char* label2 = getLabel();
+						appendCode("goto " + string(label2));
+						appendCode(string(label1) + ":");
+						appendCode(string($<var.addr>$) + " =b #false");
+						appendCode(string(label2) + ":");
+					}
 
 					if( parseDebug == 1 )
 					{
@@ -1773,21 +1812,24 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot apply '||' to non-boolean operands" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
+						$<var.addr>$ = getTemp("bool");
+						$<var.type>$ = $<var.type>1;
 					}
-					$<var.addr>$ = getTemp("bool");
-					$<var.type>$ = $<var.type>1;
+					else
+					{
+						$<var.addr>$ = getTemp("bool");
+						$<var.type>$ = $<var.type>1;
 
-					char* label1 = getLabel();
-					appendCode("if ( " + string($<var.addr>1) + " ==b #true ) goto " + string(label1));
-					appendCode("if ( " + string($<var.addr>3) + " ==b #true ) goto " + string(label1));
-					appendCode(string($<var.addr>$) + " =b #false");
-					char* label2 = getLabel();
-					appendCode("goto " + string(label2));
-					appendCode(string(label1) + ":");
-					appendCode(string($<var.addr>$) + " =b #true");
-					appendCode(string(label2) + ":");
-
+						char* label1 = getLabel();
+						appendCode("if ( " + string($<var.addr>1) + " ==b #true ) goto " + string(label1));
+						appendCode("if ( " + string($<var.addr>3) + " ==b #true ) goto " + string(label1));
+						appendCode(string($<var.addr>$) + " =b #false");
+						char* label2 = getLabel();
+						appendCode("goto " + string(label2));
+						appendCode(string(label1) + ":");
+						appendCode(string($<var.addr>$) + " =b #true");
+						appendCode(string(label2) + ":");
+					}
 					if( parseDebug == 1 )
 					{
 						cout << "logical_or -> logicalor || logicaland" << endl;
@@ -1879,9 +1921,6 @@ extern "C"
 							cout << "COMPILETIME ERROR: different operands type to '='" << endl;
 							cout << "ltype = " << ltype << " rtype = " << rtype << endl;
 							cout << "At line : " << yylineno << endl;
-							cout << TemporaryCode << endl;
-							printSymbolTable();
-							return -1;
 						}
 					}
 					else if( op[0] == '%' )
@@ -1890,7 +1929,6 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: non-int operands to %" << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
 						}
 						else
 						{
@@ -1903,7 +1941,6 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: invalid operands for "  << op << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
 						}
 						else
 						{
@@ -1919,7 +1956,6 @@ extern "C"
 							{
 								cout << "COMPILETIME ERROR: cannot convert int to float" << endl;
 								cout << "At line : " << yylineno << endl;
-								return -1;
 							}
 							else if( type1 == "float" and type2 == "int" )
 							{
@@ -1943,7 +1979,6 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: cannot convert int to float" << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
 						}
 						else if( type1 == "float" and type2 == "int" )
 						{
@@ -1971,7 +2006,6 @@ extern "C"
 						{
 							cout << "COMPILETIME ERROR: Invalid operands for +" << endl;
 							cout << "At line : " << yylineno << endl;
-							return -1;
 						}
 					}
 					if( parseDebug == 1 )
@@ -2014,7 +2048,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Redeclaration of an already existing variable " << var << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 
 					if( parseDebug == 1 )
@@ -2036,47 +2069,51 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot assign different variable types: " << dtype << " and " << string($<var.type>4) << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
-					vector<string> levels;
+					else
+					{
+						vector<string> levels;
 
-					string var($<str>2);
-					string val($<var.addr>4);
-					if( insertVariable(var, dd, levels) == -1 )
-					{
-						cout << "COMPILETIME ERROR: Redeclaration of an already existing variable " << var << endl;
-						cout << "At line : " << yylineno << endl;
-						return -1;
-					}
-					SymbolTableEntry ste = getVariable( var);
-					if( dd == "int" )
-					{
-						appendCode(ste.name + "_" + to_string(ste.scope) + " =i " + val);
-					}
-					else if( dd == "float" )
-					{
-						appendCode(ste.name + "_" + to_string(ste.scope) + " =f " + val);
-					}
-					else if( dd == "bool" )
-					{
-						appendCode(ste.name + "_" + to_string(ste.scope) + " =b " + val);
-					}
-					else if( dd == "char" )
-					{
-						appendCode(ste.name + "_" + to_string(ste.scope) + " =c " + val);
-					}
-					else if( dd == "string" )
-					{
-						appendCode(ste.name + "_" + to_string(ste.scope) + " =s " + val);
-					}
-					else if( dd[0] != '*' )
-					{
-						appendCode(ste.name + "_" + to_string(ste.scope) + " =v " + val);
-					}
+						string var($<str>2);
+						string val($<var.addr>4);
+						if( insertVariable(var, dd, levels) == -1 )
+						{
+							cout << "COMPILETIME ERROR: Redeclaration of an already existing variable " << var << endl;
+							cout << "At line : " << yylineno << endl;
+						}
+						else
+						{
+							SymbolTableEntry ste = getVariable( var);
+							if( dd == "int" )
+							{
+								appendCode(ste.name + "_" + to_string(ste.scope) + " =i " + val);
+							}
+							else if( dd == "float" )
+							{
+								appendCode(ste.name + "_" + to_string(ste.scope) + " =f " + val);
+							}
+							else if( dd == "bool" )
+							{
+								appendCode(ste.name + "_" + to_string(ste.scope) + " =b " + val);
+							}
+							else if( dd == "char" )
+							{
+								appendCode(ste.name + "_" + to_string(ste.scope) + " =c " + val);
+							}
+							else if( dd == "string" )
+							{
+								appendCode(ste.name + "_" + to_string(ste.scope) + " =s " + val);
+							}
+							else if( dd[0] != '*' )
+							{
+								appendCode(ste.name + "_" + to_string(ste.scope) + " =v " + val);
+							}
 
-					if( dd[0] == '*' )
-					{
-						appendCode(ste.name+ "_" + to_string(ste.scope) + " =i " + val);
+							if( dd[0] == '*' )
+							{
+								appendCode(ste.name+ "_" + to_string(ste.scope) + " =i " + val);
+							}
+						}
 					}
 
 					if( parseDebug == 1 )
@@ -2109,7 +2146,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Redeclaration of an already existing variable " << var << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 
 					if( parseDebug == 1 )
@@ -2142,7 +2178,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot use non-int values as sizes for arrays" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					
 				}
@@ -2158,7 +2193,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot use non-int values as sizes for arrays" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 				}
 			;
@@ -2314,6 +2348,7 @@ extern "C"
 						cout << "statement -> return" << endl;
 					}
 				}
+			| error ';'
 			;
 	
 	flow_control_statements
@@ -2323,7 +2358,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot use break outside for loop" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					else
 					{
@@ -2337,7 +2371,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: cannot use continue outside for loop" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					else
 					{
@@ -2424,7 +2457,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Cannot print Expression of type " << string($<var.type>1) << endl;
 						cout << "At Line " << yylineno << endl;
-						return -1;
 					}
 				}
 
@@ -2460,7 +2492,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Cannot print Expression of type " << string($<var.type>1) << endl;
 						cout << "At Line " << yylineno << endl;
-						return -1;
 					}
 				}
 			;
@@ -2566,7 +2597,6 @@ extern "C"
 					if( strcmp($<var.type>1, "bool") != 0 )
 					{
 						cout << "COMPILETIME ERROR: non-boolean expression is being used as loop condition" << endl;
-						return 1;
 					}
 
 					forExprVal = string($<var.addr>1);
@@ -2699,7 +2729,6 @@ extern "C"
 					if( res == -2 )
 					{	
 						cout << "COMPILETIME ERROR: Attribute with the given name already exists" << endl;
-						return -1;
 					}
 					else if( res == -1 )
 					{
@@ -2728,20 +2757,21 @@ extern "C"
 					if( res == -2 )
 					{
 						cout << "COMPILETIME ERROR: " << "Redefinition of the function main" << endl;
-						return -1;
 					}
 					else if( res == -1 )
 					{
 						cout << "COMPILETIME ERROR: " << "Function Declaration prohibited" << endl;
-						return -1;
 					}
-					currentFunction = "main";
+					else
+					{
+						currentFunction = "main";
 
-					string label = getLabel();
-					appendCode(label + ":");
-					setLabel(currentFunction, label);
-					appendCode("function start " + currentStruct + "." + currentFunction);
-					appendCode("setReturn");
+						string label = getLabel();
+						appendCode(label + ":");
+						setLabel(currentFunction, label);
+						appendCode("function start " + currentStruct + "." + currentFunction);
+						appendCode("setReturn");
+					}
 					if( parseDebug == 1 )
 					{
 						cout << "function -> void main" << endl;
@@ -2766,16 +2796,17 @@ extern "C"
 					if( res == -2 )
 					{
 						cout << "COMPILETIME ERROR: " << "Redefinition of the function " << fname << endl;
-						return -1;
 					}
 					else if( res == -1 )
 					{
 						cout << "COMPILETIME ERROR: " << "Function Declaration prohibited" << endl;
-						return -1;
 					}
-					currentFunction = fname;
-					currentScope++;
-					scopeStack.push(currentScope);
+					else
+					{
+						currentFunction = fname;
+						currentScope++;
+						scopeStack.push(currentScope);
+					}
 				}
 		functionSuffix
 
@@ -2792,16 +2823,17 @@ extern "C"
 					if( res == -2 )
 					{
 						cout << "COMPILETIME ERROR: " << "Redefinition of the function " << fname << endl;
-						return -1;
 					}
 					else if( res == -1 )
 					{
 						cout << "COMPILETIME ERROR: " << "Function Declaration prohibited" << endl;
-						return -1;
 					}
-					currentFunction = fname;
-					currentScope++;
-					scopeStack.push(currentScope);
+					else
+					{
+						currentFunction = fname;
+						currentScope++;
+						scopeStack.push(currentScope);
+					}
 				}
 
 		functionSuffix
@@ -2858,7 +2890,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					dlevels = 0;
 				}
@@ -2876,7 +2907,6 @@ extern "C"
 					{
 						cout << "COMPILETIME ERROR: Redeclaration of an already existing variable" << endl;
 						cout << "At line : " << yylineno << endl;
-						return -1;
 					}
 					dlevels = 0;
 				}
@@ -2922,7 +2952,6 @@ int main( int argcount, char* arguements[] )
 		return 0;
 	}
 	
-	cout << "Successfully Completed Compiling" << endl;
 	string file = "file.temp";
 	ofstream Myfile(file);
 
@@ -2936,7 +2965,6 @@ int main( int argcount, char* arguements[] )
 	functionFrame += "code starts\nfunCall main.main\ncall " + getFunctionLabel("main", "main") + "\nexit\n";
 	TemporaryCode = functionFrame + TemporaryCode;
 
-	//printSymbolTable();
 	Myfile << TemporaryCode;
 	Myfile.close();
 	return 0;
