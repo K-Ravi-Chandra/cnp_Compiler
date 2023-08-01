@@ -1,6 +1,7 @@
 %{
 	#include "y.tab.h" 
 	#include<string.h>
+	#include "supporter.h"
 	int DEBUG = 0;
 %}
 ws				[ \t\v\f]
@@ -391,6 +392,7 @@ identifier		{letter}({letter}|{digit})*
 						{
 							printf("line no is %d\n",yylineno);
 						}
+							tempint = 1;
 						yylineno++;
 					}
 {ws}+				{

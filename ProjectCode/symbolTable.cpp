@@ -7,6 +7,7 @@
 #include<stack>
 #include<unistd.h>
 #include"symbolTable.h"
+#include "supporter.h"
 
 using namespace std;
 
@@ -44,7 +45,11 @@ char* getTemp( string type )
 	//appendCode(type + " " + temp);		//add the declaration
 	return t;
 }
-
+//This will be executed when new line occurrs
+void reset_temp_int()
+{
+	tempint = 1;
+}
 //this one does the same thing except that it does not declare the variable.
 char* getTemp()
 {

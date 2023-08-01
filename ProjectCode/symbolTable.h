@@ -12,7 +12,6 @@ extern vector<string> declevels;
 extern string dtype;
 extern stack<string> ifgoto;
 extern string forExprVal;
-extern int tempint;
 extern int strConstInt;
 extern stack<string> forIncrement;
 extern stack<string> forNext;

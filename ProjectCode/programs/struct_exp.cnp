@@ -1,0 +1,17 @@
+var complex
+{
+    int real;
+    int imaginary;
+
+    void initialize(int i , int j)
+    {
+        real = i;
+        imaginary = j;
+    }
+}
+
+void main()
+{
+    var complex c;
+    c.initialize;
+}
